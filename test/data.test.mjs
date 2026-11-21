@@ -53,3 +53,28 @@ test('不正な項目だけ捨てて数える', () => {
 test('settings が壊れていても既定で通す', () => {
   assert.deepEqual(L.validateImport({ ...good(), settings: 'x' }, ['photos/p1.jpg']).data.settings, L.DEFAULT_SETTINGS);
 });
+test('supportUrl', () => {
+  assert.equal(L.supportUrl('manual'), 'https://support.trusted-host.online/t/mmnote/manual');
+  assert.equal(L.supportUrl('error'), 'https://support.trusted-host.online/t/mmnote/error-report');
+  assert.equal(L.supportUrl('nope'), null);
+  assert.deepEqual(L.SUPPORT.links.map((l) => l.key), ['manual', 'faq', 'releases', 'news', 'contact', 'error', 'terms', 'privacy']);
+});
+for (const lang of ['ja', 'en']) {
+  test(`buildSample(${lang}) は正規化を通り、3 つの状態が出る`, () => {
+    let n = 0;
+    const s = L.buildSample(lang, '2026-11-21', () => 'id' + (++n));
+    assert.equal(s.equipment.length, 4);
+    assert.ok(s.records.length >= 14 && s.records.length <= 16);
+    for (const e of s.equipment) { assert.deepEqual(L.normalizeEquipment(e), e); assert.deepEqual(L.validateEquipment(e), []); }
+    for (const r of s.records) { assert.deepEqual(L.normalizeRecord(r), r); assert.deepEqual(L.validateRecord(r), []); assert.ok(r.date <= '2026-11-21'); }
+    const st = new Set(L.listDues(s.records, s.equipment, '2026-11-21', 30).map((d) => d.status));
+    assert.deepEqual([...st].sort(), ['later', 'overdue', 'soon']);
+    assert.equal(s.photos.length, 4);
+    assert.deepEqual(new Set(s.equipment.map((e) => e.category)).size >= 3, true);
+  });
+}
+test('サンプルは今日を変えても 3 つの状態が出る', () => {
+  let n = 0;
+  const s = L.buildSample('ja', '2028-02-29', () => 'id' + (++n));
+  assert.equal(new Set(L.listDues(s.records, s.equipment, '2028-02-29', 30).map((d) => d.status)).size, 3);
+});

@@ -245,6 +245,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .field > input, .field > select { width: 100%; min-width: 0; }
 .data-actions { display: flex; flex-direction: column; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
 .settings-note { margin: 0 0 var(--gap); font-size: var(--fs-small); color: var(--fg-muted); }
+#btn-goto-sample { margin-bottom: var(--gap); }
+a.icon-btn { text-decoration: none; }
+.link-list { list-style: none; margin: 0 0 calc(var(--gap) / 2); padding: 0; }
+.link-list a, #about-list a { color: var(--accent); }
+.link-list a { display: flex; align-items: center; min-height: 44px; border-bottom: 1px solid var(--border); }
+#about-list { margin-bottom: var(--gap); align-items: center; }
+#about-list dd a { display: inline-flex; align-items: center; min-height: 44px; overflow-wrap: anywhere; }
+.about-text { margin: 0 0 var(--gap); }
 
 /* 入力欄とボタン */
 select, input, textarea, .btn {
@@ -312,7 +320,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
   <symbol id="icon-add-photo" viewBox="0 0 24 24"><path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm3 6V7h3V4h7l1.83 2H21c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V10h3zm7 9c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-3.2-5c0 1.77 1.43 3.2 3.2 3.2s3.2-1.43 3.2-3.2-1.43-3.2-3.2-3.2-3.2 1.43-3.2 3.2z"/></symbol>
 </svg>
 <header id="toolbar">
-  <button id="btn-help" class="icon-btn" type="button" data-i18n-label="help"><svg aria-hidden="true"><use href="#icon-help"></use></svg></button>
+  <a id="btn-help" class="icon-btn" target="_blank" rel="noopener" data-i18n-label="help"><svg aria-hidden="true"><use href="#icon-help"></use></svg></a>
   <button id="btn-theme" class="icon-btn" type="button" data-i18n-label="toggle_theme"><svg aria-hidden="true"><use href="#icon-dark-mode"></use></svg></button>
   <button id="btn-zoom-out" class="icon-btn" type="button" data-i18n-label="zoom_out"><svg aria-hidden="true"><use href="#icon-zoom-out"></use></svg></button>
   <button id="btn-zoom-in" class="icon-btn" type="button" data-i18n-label="zoom_in"><svg aria-hidden="true"><use href="#icon-zoom-in"></use></svg></button>
@@ -339,6 +347,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
         </select>
       </div>
       <p id="equipment-empty" class="empty" hidden></p>
+      <button id="btn-goto-sample" class="btn" type="button" data-i18n="empty_try_sample" hidden></button>
       <ul id="equipment-list" class="row-list"></ul>
     </div>
     <div id="equipment-detail" hidden></div>
@@ -396,10 +405,22 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
         <button id="btn-export" class="btn" type="button" data-i18n="data_export"></button>
         <button id="btn-import" class="btn" type="button" data-i18n="data_import"></button>
         <input id="import-file" type="file" accept=".zip,application/zip" hidden>
+        <button id="btn-sample" class="btn" type="button" data-i18n="data_sample"></button>
         <button id="btn-erase" class="btn danger" type="button" data-i18n="data_erase"></button>
       </div>
+      <p class="settings-note" data-i18n="data_sample_note"></p>
       <p id="data-usage" class="settings-note" hidden></p>
       <p class="settings-note" data-i18n="data_ios_note"></p>
+    </details>
+    <details class="settings-section" data-section="support">
+      <summary data-i18n="section_support"></summary>
+      <ul id="support-links" class="link-list"></ul>
+      <p class="settings-note" data-i18n="support_note"></p>
+    </details>
+    <details class="settings-section" data-section="about">
+      <summary data-i18n="section_about"></summary>
+      <p class="about-text" data-i18n="about_text"></p>
+      <dl id="about-list" class="kv"></dl>
     </details>
   </section>
   <button id="btn-add-equipment" class="fab" type="button" data-i18n-label="add_equipment" hidden><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
@@ -818,6 +839,63 @@ const Logic = (() => {
       import_done: '取り込みました(機器 {equipment} 件、記録 {records} 件、写真 {photos} 枚)',
       import_done_dropped: '取り込みました(機器 {equipment} 件、記録 {records} 件、写真 {photos} 枚)。捨てた分: 機器 {de} 件、記録 {dr} 件、写真 {dp} 枚',
       confirm_erase: 'すべての機器・記録・写真と設定を消去します。元に戻せません。\n先にエクスポートしておくことをお勧めします。',
+      data_sample: 'サンプルデータを入れる',
+      data_sample_note: 'サンプルデータは、機器も記録も無いときだけ入れられます。',
+      sample_done: 'サンプルデータを入れました(機器 {equipment} 件、記録 {records} 件)',
+      err_sample_failed: 'サンプルデータを入れられませんでした: {reason}',
+      empty_try_sample: 'サンプルデータで試す',
+      section_support: 'サポート',
+      support_note: 'リンクは別のタブで開きます。',
+      support_manual: 'マニュアル',
+      support_faq: 'FAQ',
+      support_releases: 'リリースノート',
+      support_news: 'お知らせ',
+      support_contact: 'お問い合わせ',
+      support_error: 'エラー報告',
+      support_terms: '利用規約',
+      support_privacy: 'プライバシーポリシー',
+      section_about: 'About',
+      about_text: '車両・機械・設備の点検や修理を記録し、次回の予定を知らせるメンテナンス手帳です。データはこの端末の中だけに保存され、どこにも送られません。',
+      about_version: 'バージョン',
+      about_source: 'ソースコード',
+      about_license: 'ライセンス',
+      about_credits: 'クレジット',
+      sample_car_name: '社用車 1号',
+      sample_car_note: '営業用。冬用タイヤは倉庫に保管。',
+      sample_forklift_name: 'フォークリフト 2号',
+      sample_forklift_note: '倉庫 A で使用。毎月初めに始業前点検の記録を付ける。',
+      sample_compressor_name: 'エアコンプレッサー',
+      sample_aircon_name: '事務所エアコン',
+      sample_maker_car: 'ノルテ自動車',
+      sample_maker_forklift: 'ハコベ産機',
+      sample_maker_compressor: 'カゼマル工業',
+      sample_maker_aircon: 'ヒエール空調',
+      sample_spec_fuel: '燃料',
+      sample_val_hybrid: 'ハイブリッド(ガソリン)',
+      sample_spec_seats: '乗車定員',
+      sample_spec_load: '定格荷重',
+      sample_spec_power: '動力',
+      sample_val_battery: 'バッテリー',
+      sample_spec_output: '出力',
+      sample_spec_tank: 'タンク容量',
+      sample_spec_cooling: '冷房能力',
+      sample_spec_location: '設置場所',
+      sample_val_office: '事務所 2 階',
+      sample_vendor_dealer: '販売店',
+      sample_vendor_self: '自社',
+      sample_vendor_service: '保守業者',
+      sample_r_car_12m: '12 か月点検',
+      sample_r_car_oil: 'エンジンオイル交換',
+      sample_r_fl_monthly: '月次点検',
+      sample_r_fl_annual: '特定自主検査(年次)',
+      sample_r_fl_battery: 'バッテリー交換',
+      sample_r_cp_filter: '吸込フィルター清掃',
+      sample_r_cp_oil: 'コンプレッサーオイル交換',
+      sample_r_cp_valve: '安全弁の修理',
+      sample_r_cp_check: 'ドレン・圧力計の点検',
+      sample_r_ac_filter: 'フィルター清掃',
+      sample_r_ac_check: '簡易点検(冷媒漏れ)',
+      sample_r_ac_drain: 'ドレンホースの詰まり修理',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -977,6 +1055,63 @@ const Logic = (() => {
       import_done: 'Imported {equipment} equipment, {records} records and {photos} photos',
       import_done_dropped: 'Imported {equipment} equipment, {records} records and {photos} photos. Skipped: {de} equipment, {dr} records, {dp} photos',
       confirm_erase: 'Erase all equipment, records, photos and settings? This cannot be undone.\nExporting first is recommended.',
+      data_sample: 'Load sample data',
+      data_sample_note: 'Sample data can be loaded only when there is no equipment and no records.',
+      sample_done: 'Loaded sample data ({equipment} equipment, {records} records)',
+      err_sample_failed: 'Could not load sample data: {reason}',
+      empty_try_sample: 'Try with sample data',
+      section_support: 'Support',
+      support_note: 'Links open in a new tab.',
+      support_manual: 'Manual',
+      support_faq: 'FAQ',
+      support_releases: 'Release notes',
+      support_news: 'News',
+      support_contact: 'Contact',
+      support_error: 'Report an error',
+      support_terms: 'Terms of use',
+      support_privacy: 'Privacy policy',
+      section_about: 'About',
+      about_text: 'A maintenance notebook that records inspections and repairs of vehicles, machines and facilities, and tells you what is due next. Your data is stored only on this device and is never sent anywhere.',
+      about_version: 'Version',
+      about_source: 'Source code',
+      about_license: 'License',
+      about_credits: 'Credits',
+      sample_car_name: 'Company car No. 1',
+      sample_car_note: 'Used for sales visits. Winter tires are kept in the warehouse.',
+      sample_forklift_name: 'Forklift No. 2',
+      sample_forklift_note: 'Used in warehouse A. Record the pre-shift check at the start of each month.',
+      sample_compressor_name: 'Air compressor',
+      sample_aircon_name: 'Office air conditioner',
+      sample_maker_car: 'Norte Motors',
+      sample_maker_forklift: 'Hakobe Sanki',
+      sample_maker_compressor: 'Kazemaru Kogyo',
+      sample_maker_aircon: 'Hieru Kucho',
+      sample_spec_fuel: 'Fuel',
+      sample_val_hybrid: 'Hybrid (gasoline)',
+      sample_spec_seats: 'Seats',
+      sample_spec_load: 'Rated load',
+      sample_spec_power: 'Power',
+      sample_val_battery: 'Battery',
+      sample_spec_output: 'Output',
+      sample_spec_tank: 'Tank capacity',
+      sample_spec_cooling: 'Cooling capacity',
+      sample_spec_location: 'Location',
+      sample_val_office: 'Office, 2nd floor',
+      sample_vendor_dealer: 'Dealer',
+      sample_vendor_self: 'In-house',
+      sample_vendor_service: 'Service company',
+      sample_r_car_12m: '12-month inspection',
+      sample_r_car_oil: 'Engine oil change',
+      sample_r_fl_monthly: 'Monthly inspection',
+      sample_r_fl_annual: 'Annual statutory inspection',
+      sample_r_fl_battery: 'Battery replacement',
+      sample_r_cp_filter: 'Intake filter cleaning',
+      sample_r_cp_oil: 'Compressor oil change',
+      sample_r_cp_valve: 'Safety valve repair',
+      sample_r_cp_check: 'Drain and pressure gauge check',
+      sample_r_ac_filter: 'Filter cleaning',
+      sample_r_ac_check: 'Simple inspection (refrigerant leaks)',
+      sample_r_ac_drain: 'Clogged drain hose repair',
     },
   };
 
@@ -1148,8 +1283,93 @@ const Logic = (() => {
     };
   }
 
+  // ---- サポートのリンク(自分のテナントに差し替えるときはここだけ直す) ----
+  const SUPPORT = {
+    base: 'https://support.trusted-host.online/t/mmnote',
+    links: [
+      { key: 'manual',   path: '/manual' },
+      { key: 'faq',      path: '/faq' },
+      { key: 'releases', path: '/releases' },
+      { key: 'news',     path: '/news' },
+      { key: 'contact',  path: '/contact' },
+      { key: 'error',    path: '/error-report' },
+      { key: 'terms',    path: '/terms' },
+      { key: 'privacy',  path: '/privacy' },
+    ],
+  };
+  function supportUrl(key) {
+    const l = SUPPORT.links.find((x) => x.key === key);
+    return l ? SUPPORT.base + l.path : null;
+  }
+
+  const ABOUT = { name: 'mmnote', version: '1.0.0', repo: 'https://github.com/4each-biz/mmnote', license: 'MIT', credits: ['fflate (MIT)', 'Material Icons (Apache 2.0)'] };
+
+  // ---- サンプルデータ(日付はすべて今日からの相対) ----
+  function addDays(s, n) {
+    const [y, m, d] = parseDate(s);
+    const dt = new Date(Date.UTC(y, m - 1, d + n));
+    return `${pad(dt.getUTCFullYear(), 4)}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+  }
+  // 機器: art は app-ui の絵の名前。値が sample_ で始まれば辞書のキー
+  const SAMPLE_EQUIPMENT = [
+    { art: 'car', category: 'vehicle', name: 'sample_car_name', maker: 'sample_maker_car', model: 'NR-50H', serial: '', monthsAgo: 48,
+      specs: [['sample_spec_fuel', 'sample_val_hybrid'], ['sample_spec_seats', '5']], note: 'sample_car_note' },
+    { art: 'forklift', category: 'machine', name: 'sample_forklift_name', maker: 'sample_maker_forklift', model: 'HB-15E', serial: 'HB15E-30512', monthsAgo: 60,
+      specs: [['sample_spec_load', '1.5 t'], ['sample_spec_power', 'sample_val_battery']], note: 'sample_forklift_note' },
+    { art: 'compressor', category: 'machine', name: 'sample_compressor_name', maker: 'sample_maker_compressor', model: 'KM-075P', serial: '', monthsAgo: 30,
+      specs: [['sample_spec_output', '0.75 kW'], ['sample_spec_tank', '39 L']], note: '' },
+    { art: 'aircon', category: 'facility', name: 'sample_aircon_name', maker: 'sample_maker_aircon', model: 'HA-56C', serial: '', monthsAgo: 72,
+      specs: [['sample_spec_cooling', '5.6 kW'], ['sample_spec_location', 'sample_val_office']], note: '' },
+  ];
+  // 記録: [機器, 区分, 何日前, 作業内容, 費用, 業者, 計器, 単位, 次回予定は今日から何日後]
+  // 生きている予定: 期限切れ 2(-5, -3)、期限間近 4(5, 11, 16, 25)、それ以降 3(60, 160, 185)。古い記録の予定は新しい記録で済みになる
+  const SAMPLE_RECORDS = [
+    [0, 'inspection', 370, 'sample_r_car_12m', 22000, 'sample_vendor_dealer', 36800, 'km', -5],
+    [0, 'replacement', 200, 'sample_r_car_oil', 5500, 'sample_vendor_dealer', 39100, 'km', -20],
+    [0, 'replacement', 20, 'sample_r_car_oil', 6000, 'sample_vendor_dealer', 43100, 'km', 160],
+    [1, 'inspection', 49, 'sample_r_fl_monthly', null, 'sample_vendor_self', 1520, 'h', -19],
+    [1, 'inspection', 19, 'sample_r_fl_monthly', null, 'sample_vendor_self', 1580, 'h', 11],
+    [1, 'other', 340, 'sample_r_fl_annual', 45000, 'sample_vendor_service', 1210, 'h', 25],
+    [1, 'replacement', 37, 'sample_r_fl_battery', 85000, 'sample_vendor_service', null, '', null],
+    [2, 'cleaning', 95, 'sample_r_cp_filter', null, 'sample_vendor_self', null, '', -3],
+    [2, 'replacement', 180, 'sample_r_cp_oil', 4800, 'sample_vendor_self', 2400, 'h', 185],
+    [2, 'repair', 120, 'sample_r_cp_valve', 18000, 'sample_vendor_service', null, '', null],
+    [2, 'inspection', 30, 'sample_r_cp_check', null, 'sample_vendor_self', null, '', 60],
+    [3, 'cleaning', 44, 'sample_r_ac_filter', null, 'sample_vendor_self', null, '', -14],
+    [3, 'cleaning', 14, 'sample_r_ac_filter', null, 'sample_vendor_self', null, '', 16],
+    [3, 'inspection', 85, 'sample_r_ac_check', 8000, 'sample_vendor_service', null, '', 5],
+    [3, 'repair', 160, 'sample_r_ac_drain', 12000, 'sample_vendor_service', null, '', null],
+  ];
+
+  function buildSample(lang, today, nextId) {
+    const tx = (v) => (typeof v === 'string' && v.startsWith('sample_') ? t(lang, v) : v);
+    const stamp = (date) => `${date}T00:00:00.000Z`;
+    const photos = [];
+    const equipment = SAMPLE_EQUIPMENT.map((s) => {
+      const id = nextId();
+      const photoId = nextId();
+      photos.push({ id: photoId, ownerType: 'equipment', ownerId: id, art: s.art });
+      return {
+        id, name: tx(s.name), category: s.category, maker: tx(s.maker), model: s.model, serial: s.serial,
+        acquiredOn: addMonths(today, -s.monthsAgo),
+        specs: s.specs.map(([label, value]) => ({ label: tx(label), value: tx(value) })),
+        note: tx(s.note), photoIds: [photoId], createdAt: stamp(today), updatedAt: stamp(today),
+      };
+    });
+    const records = SAMPLE_RECORDS.map(([eq, kind, daysAgo, title, cost, vendor, meterValue, meterUnit, dueIn]) => {
+      const date = addDays(today, -daysAgo);
+      return {
+        id: nextId(), equipmentId: equipment[eq].id, date, kind, title: tx(title), cost, vendor: tx(vendor),
+        meterValue, meterUnit, nextDue: dueIn === null ? null : addDays(today, dueIn), note: '', photoIds: [],
+        createdAt: stamp(date), updatedAt: stamp(date),
+      };
+    });
+    return { equipment, records, photos };
+  }
+
   return {
     SETTINGS_VERSION, TABS, DEFAULT_SETTINGS, DISPLAY_ONLY_KEYS,
+    SUPPORT, supportUrl, ABOUT, buildSample, addDays,
     exportFileName, buildExport, validateImport, photoFile,
     mergeSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
     CATEGORIES, KINDS, LIMITS, isDate,
@@ -1825,6 +2045,7 @@ const App = (() => {
     // サンプルデータへの導線は 0 件の案内の後ろに足す
     empty.textContent = !dbReady() ? '' : total === 0 ? tr('empty_equipment') : items.length === 0 ? tr('empty_filtered') : '';
     empty.hidden = !empty.textContent;
+    $('#btn-goto-sample').hidden = !dbReady() || total !== 0 || state.records.length !== 0;
     $('#equipment-list').replaceChildren(...(dbReady() ? items.map((e) => equipmentRow(e, dues)) : []));
   }
 
@@ -2555,6 +2776,7 @@ const App = (() => {
     $('#eq-category').addEventListener('change', (ev) => { state.equipmentFilter.category = ev.target.value; renderEquipment(); });
     $('#eq-sort').addEventListener('change', (ev) => { state.equipmentFilter.sort = ev.target.value; renderEquipment(); });
     $('#btn-add-equipment').addEventListener('click', () => openEquipmentSheet(null));
+    $('#btn-goto-sample').addEventListener('click', gotoSample);
     window.addEventListener('popstate', onPopState);
   }
 
@@ -2642,6 +2864,55 @@ const App = (() => {
       if (file) runData(() => importData(file));
     });
     $('#btn-erase').addEventListener('click', () => runData(eraseAll));
+    $('#btn-sample').addEventListener('click', () => runData(loadSample));
+    buildSupport();
+    buildAbout();
+  }
+
+  // 別タブで開くリンク
+  function externalLink(href, i18nKey, text) {
+    const a = el('a', null, text);
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    if (i18nKey) a.dataset.i18n = i18nKey;
+    return a;
+  }
+
+  // サポートのリンク(文言は applyI18n が data-i18n から入れる)
+  function buildSupport() {
+    $('#support-links').replaceChildren(...Logic.SUPPORT.links.map((l) => {
+      const li = el('li');
+      li.append(externalLink(Logic.supportUrl(l.key), `support_${l.key}`));
+      return li;
+    }));
+  }
+
+  function buildAbout() {
+    const A = Logic.ABOUT;
+    const row = (key, value) => {
+      const dt = el('dt');
+      dt.dataset.i18n = key;
+      const dd = el('dd');
+      dd.append(value);
+      return [dt, dd];
+    };
+    $('#about-list').replaceChildren(
+      ...row('about_version', `${A.name} ${A.version}`),
+      ...row('about_source', externalLink(A.repo, null, 'GitHub')),
+      ...row('about_license', A.license),
+      ...row('about_credits', A.credits.join(', ')),
+    );
+  }
+
+  // 機器タブの 0 件の案内から、設定タブのサンプルのボタンへ
+  function gotoSample() {
+    switchTab('settings');
+    const sec = $('.settings-section[data-section="data"]');
+    sec.open = true;
+    const btn = $('#btn-sample');
+    btn.scrollIntoView({ block: 'center' });
+    btn.focus({ preventScroll: true });
   }
 
   // ---- データ(エクスポート / インポート / 全消去) ----
@@ -2655,7 +2926,9 @@ const App = (() => {
 
   function renderData() {
     for (const id of ['#btn-export', '#btn-import', '#btn-erase']) $(id).disabled = dataBusy || state.db !== 'ok';
+    $('#btn-sample').disabled = dataBusy || state.db !== 'ok' || !isEmpty();
   }
+  const isEmpty = () => state.equipment.length === 0 && state.records.length === 0;
 
   function updateUsage() {
     const est = navigator.storage?.estimate?.();
@@ -2771,6 +3044,104 @@ const App = (() => {
     location.replace(location.pathname);
   }
 
+  // ---- サンプルデータ ----
+  // サンプルの写真に使う線画(400×300 の座標で描き、1200×900 で書き出す)
+  const ART_HEAD = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 400 300">';
+  const ART_LINE = '<g fill="none" stroke="#2b3640" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">';
+  const SAMPLE_ART = {
+    car: `${ART_HEAD}<rect width="400" height="300" fill="#e3ebf1"/>${ART_LINE}
+      <line x1="30" y1="232" x2="370" y2="232"/>
+      <path d="M58 204 V168 Q60 148 92 144 L136 138 L172 100 Q180 92 196 92 H262 Q278 92 290 104 L326 140 Q350 144 352 168 V204 Z" fill="#f7f9fb"/>
+      <path d="M184 106 L154 138 H236 V106 Z M250 106 V138 H312 L284 106 Z"/>
+      <line x1="236" y1="140" x2="236" y2="200"/><line x1="214" y1="156" x2="226" y2="156"/>
+      <path d="M340 160 H352 M58 160 H70"/>
+      <circle cx="116" cy="206" r="27" fill="#e3ebf1"/><circle cx="116" cy="206" r="10"/>
+      <circle cx="294" cy="206" r="27" fill="#e3ebf1"/><circle cx="294" cy="206" r="10"/></g></svg>`,
+    forklift: `${ART_HEAD}<rect width="400" height="300" fill="#f1ece0"/>${ART_LINE}
+      <line x1="30" y1="244" x2="370" y2="244"/>
+      <path d="M120 36 V222 M138 36 V222 M120 36 H138 M120 110 H138 M120 170 H138"/>
+      <path d="M138 228 H54 M138 200 V230"/>
+      <rect x="56" y="160" width="60" height="62" fill="#fbf8f1"/><path d="M56 191 H116 M86 160 V222"/>
+      <path d="M150 220 V150 H272 Q292 150 296 178 V220 Z" fill="#fbf8f1"/>
+      <path d="M160 150 L172 66 H252 L264 150 M172 66 L158 150"/>
+      <path d="M214 150 V124 H242"/><path d="M186 150 L198 112 L206 116"/>
+      <circle cx="176" cy="222" r="21" fill="#f1ece0"/><circle cx="176" cy="222" r="7"/>
+      <circle cx="268" cy="222" r="21" fill="#f1ece0"/><circle cx="268" cy="222" r="7"/></g></svg>`,
+    compressor: `${ART_HEAD}<rect width="400" height="300" fill="#e6eee3"/>${ART_LINE}
+      <line x1="30" y1="262" x2="370" y2="262"/>
+      <rect x="66" y="150" width="268" height="84" rx="42" fill="#f6f9f4"/>
+      <rect x="104" y="92" width="92" height="58" rx="8" fill="#f6f9f4"/>
+      <path d="M120 104 V138 M136 104 V138 M152 104 V138 M168 104 V138 M184 104 V138"/>
+      <rect x="216" y="100" width="58" height="50" rx="4" fill="#f6f9f4"/><path d="M196 120 H216"/>
+      <path d="M274 124 H296 V132"/><circle cx="306" cy="114" r="18" fill="#f6f9f4"/><path d="M306 114 L316 104"/>
+      <path d="M334 186 L364 168 V128"/>
+      <path d="M110 234 V246 M290 234 V246"/>
+      <circle cx="110" cy="248" r="13" fill="#e6eee3"/><circle cx="290" cy="248" r="13" fill="#e6eee3"/></g></svg>`,
+    aircon: `${ART_HEAD}<rect width="400" height="300" fill="#ecebf3"/>${ART_LINE}
+      <line x1="30" y1="44" x2="370" y2="44"/>
+      <rect x="52" y="64" width="296" height="108" rx="22" fill="#fafafd"/>
+      <path d="M70 138 H330 M84 154 H316"/><circle cx="314" cy="96" r="5"/><line x1="76" y1="96" x2="150" y2="96"/>
+      <path d="M110 196 q12 14 0 28 t0 28 M200 196 q12 14 0 28 t0 28 M290 196 q12 14 0 28 t0 28"/></g></svg>`,
+  };
+
+  // SVG の文字列を Image → canvas で PNG の Blob にする(写真と同じ経路に渡すため)
+  function rasterizeArt(svg) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 1200;
+        canvas.height = img.naturalHeight || 900;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((b) => (b ? resolve(b) : reject('photo_unreadable')), 'image/png');
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject('photo_unreadable'); };
+      img.src = url;
+    });
+  }
+
+  // 機器も記録も 0 件のときだけ。絵は通常の写真と同じく JPEG の本体とサムネイルにして保存する
+  async function loadSample() {
+    if (!isEmpty()) return;
+    setStatus('ok', 'data_working');
+    const sample = Logic.buildSample(state.settings.lang, today(), newId);
+    const now = new Date().toISOString();
+    const blobs = new Map();
+    const photos = [];
+    for (const p of sample.photos) {
+      try {
+        const img = await Photos.prepare(await rasterizeArt(SAMPLE_ART[p.art]));
+        blobs.set(p.id, { blob: img.blob, thumb: img.thumb });
+        photos.push({ id: p.id, ownerType: p.ownerType, ownerId: p.ownerId, width: img.width, height: img.height, createdAt: now });
+      } catch { /* 絵を作れなければ、その機器は写真なしで入れる */ }
+    }
+    // 作っているあいだに入力されていたら上書きしない
+    if (!isEmpty()) { setStatus('ok', null); return; }
+    const kept = new Set(photos.map((p) => p.id));
+    const equipment = sample.equipment.map((e) => ({ ...e, photoIds: e.photoIds.filter((id) => kept.has(id)) }));
+    try {
+      await DB.replaceAll({ equipment, records: sample.records, photos }, blobs);
+    } catch (err) {
+      statusError('err_sample_failed', err);
+      return;
+    }
+    forgetAllThumbs();
+    try {
+      const loaded = await DB.loadAll();
+      state.equipment = loaded.equipment;
+      state.records = loaded.records;
+    } catch {
+      state.equipment = equipment;
+      state.records = sample.records;
+    }
+    state.view = { name: 'list' };
+    state.recordsView = { name: 'list' };
+    setStatus('ok', 'sample_done', { equipment: state.equipment.length, records: state.records.length });
+    render();
+  }
+
   // ---- 描画とタブ ----
   function render() {
     if ($('#sheet').open) return;
@@ -2817,7 +3188,8 @@ const App = (() => {
   }
 
   function bindToolbar() {
-    // ヘルプはマニュアルへのリンクにする(後続のタスク)
+    // ヘルプはマニュアルを別タブで開くリンク
+    $('#btn-help').href = Logic.supportUrl('manual');
     $('#btn-theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
       saveSettings({ theme: next });
