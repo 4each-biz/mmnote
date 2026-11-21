@@ -510,6 +510,17 @@ const Logic = (() => {
     return out;
   }
 
+  // 設定を変える: 保存する値(stored)に patch を混ぜ、変えたキーは URL の指定(overrides)から外す。
+  // 不正な値のキーは rejected に返し、どちらも変えない
+  function patchSettings(stored, overrides, patch) {
+    const keys = Object.keys(patch || {});
+    const accepted = keys.filter((k) => Object.hasOwn(VALIDATORS, k) && VALIDATORS[k](coerce(k, patch[k])) !== undefined);
+    const nextStored = mergeSettings(stored, patch);
+    const nextOverrides = { ...overrides };
+    for (const k of accepted) delete nextOverrides[k];
+    return { stored: nextStored, overrides: nextOverrides, settings: mergeSettings(nextStored, nextOverrides), rejected: keys.filter((k) => !accepted.includes(k)) };
+  }
+
   function detectLang(navigatorLang) {
     return typeof navigatorLang === 'string' && navigatorLang.toLowerCase().startsWith('ja') ? 'ja' : 'en';
   }
@@ -711,6 +722,7 @@ const Logic = (() => {
       cancel: 'キャンセル',
       status_counts: '機器 {equipment} / 記録 {records}',
       status_settings_saved: '設定を保存しました',
+      status_setting_invalid: '値が正しくないため、設定を変えませんでした',
       status_storage_unavailable: '設定を保存できません',
       err_save_failed: '保存できませんでした: {reason}',
       err_name_required: '名前を入力してください',
@@ -927,6 +939,7 @@ const Logic = (() => {
       cancel: 'Cancel',
       status_counts: 'Equipment {equipment} / Records {records}',
       status_settings_saved: 'Settings saved',
+      status_setting_invalid: 'The value is not valid, so the setting was not changed',
       status_storage_unavailable: 'Settings cannot be saved',
       err_save_failed: 'Could not save: {reason}',
       err_name_required: 'Enter a name',
@@ -1372,7 +1385,7 @@ const Logic = (() => {
     SETTINGS_VERSION, TABS, DEFAULT_SETTINGS, DISPLAY_ONLY_KEYS,
     SUPPORT, supportUrl, ABOUT, buildSample, addDays,
     exportFileName, buildExport, validateImport, photoFile,
-    mergeSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
+    mergeSettings, patchSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
     CATEGORIES, KINDS, LIMITS, isDate,
     validateEquipment, validateRecord, normalizeEquipment, normalizeRecord, normalizePhotoMeta,
     toDateStr, addMonths, diffDays, activeDues, dueStatus, listDues, equipmentBadge, cascadeDelete,
@@ -1551,21 +1564,35 @@ const App = (() => {
   }
 
   // ---- 設定 ----
+  // savedSettings: localStorage に置く値。urlSettings: URL で指定され、まだ保存していない値。
+  // 画面に効くのは state.settings(= saved に url を重ねたもの)
+  let savedSettings = { ...Logic.DEFAULT_SETTINGS };
+  let urlSettings = {};
+
   function readStored() {
     try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
   }
 
   function writeStored() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: Logic.SETTINGS_VERSION, settings: state.settings }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: Logic.SETTINGS_VERSION, settings: savedSettings }));
       return true;
     } catch { return false; }
   }
 
+  // 変えたキーだけを保存する(URL で指定しただけの値は、ここでは保存しない)
   function saveSettings(patch) {
-    state.settings = Logic.mergeSettings(state.settings, patch);
-    if (writeStored()) setStatus('ok', 'status_settings_saved');
-    else setStatus('warn', 'status_storage_unavailable');
+    const r = Logic.patchSettings(savedSettings, urlSettings, patch);
+    if (r.rejected.length) {
+      // 不正な値: 何も変えず、欄は今の設定に戻る
+      setStatus('warn', 'status_setting_invalid');
+    } else {
+      savedSettings = r.stored;
+      urlSettings = r.overrides;
+      state.settings = r.settings;
+      if (writeStored()) setStatus('ok', 'status_settings_saved');
+      else setStatus('warn', 'status_storage_unavailable');
+    }
     applySettings();
     render();
   }
@@ -2853,7 +2880,7 @@ const App = (() => {
     }
     for (const e of $$('[data-setting]')) {
       e.addEventListener('change', () => {
-        // 不正な値は mergeSettings が捨てるので、欄は今の設定に戻る
+        // 不正な値は saveSettings が捨てるので、欄は今の設定に戻る
         saveSettings({ [e.dataset.setting]: e.value });
       });
     }
@@ -3009,7 +3036,9 @@ const App = (() => {
       statusError('err_import_failed', err);
       return;
     }
-    // 書き込めたら設定も置き換え、メモリの状態を読み直す
+    // 書き込めたら保存する設定も ZIP のものに置き換え(URL の指定も外して画面に効かせる)、メモリの状態を読み直す
+    savedSettings = data.settings;
+    urlSettings = {};
     state.settings = data.settings;
     const stored = writeStored();
     forgetAllThumbs();
@@ -3205,8 +3234,15 @@ const App = (() => {
   // ---- 起動 ----
   function init() {
     const query = Logic.parseQuery(location.search);
-    state.settings = Logic.mergeSettings(Logic.loadStored(readStored(), navigator.language), query.settings);
-    if (query.save && !writeStored()) setStatus('warn', 'status_storage_unavailable');
+    savedSettings = Logic.loadStored(readStored(), navigator.language);
+    urlSettings = query.settings;
+    // save=1 のときだけ URL の値を保存する
+    if (query.save) {
+      savedSettings = Logic.mergeSettings(savedSettings, urlSettings);
+      urlSettings = {};
+      if (!writeStored()) setStatus('warn', 'status_storage_unavailable');
+    }
+    state.settings = Logic.mergeSettings(savedSettings, urlSettings);
     if (query.tab) state.tab = query.tab;
     bindSettings();
     bindToolbar();

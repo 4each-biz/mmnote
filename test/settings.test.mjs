@@ -34,3 +34,27 @@ test('t は置換し、無いキーはキー名を返す', () => {
 test('日英のキーがそろっている', () => {
   assert.deepEqual(Object.keys(L.I18N.ja).sort(), Object.keys(L.I18N.en).sort());
 });
+test('patchSettings は保存する値だけを変え、変えたキーの URL 指定を外す', () => {
+  const stored = { ...L.DEFAULT_SETTINGS };
+  const overrides = { zoom: 150, lang: 'en' };
+  const r = L.patchSettings(stored, overrides, { theme: 'dark' });
+  assert.deepEqual(r.stored, { ...L.DEFAULT_SETTINGS, theme: 'dark' });
+  assert.deepEqual(r.overrides, { zoom: 150, lang: 'en' });
+  assert.deepEqual(r.settings, { ...L.DEFAULT_SETTINGS, theme: 'dark', zoom: 150, lang: 'en' });
+  assert.deepEqual(r.rejected, []);
+  const r2 = L.patchSettings(r.stored, r.overrides, { zoom: '160' });
+  assert.equal(r2.stored.zoom, 160);
+  assert.deepEqual(r2.overrides, { lang: 'en' });
+  assert.equal(r2.settings.zoom, 160);
+  assert.equal(stored.theme, 'auto');
+});
+test('patchSettings は不正な値を rejected に返し、何も変えない', () => {
+  const stored = { ...L.DEFAULT_SETTINGS };
+  const r = L.patchSettings(stored, { dueSoonDays: 14 }, { dueSoonDays: '0' });
+  assert.deepEqual(r.rejected, ['dueSoonDays']);
+  assert.deepEqual(r.stored, stored);
+  assert.deepEqual(r.overrides, { dueSoonDays: 14 });
+  assert.equal(r.settings.dueSoonDays, 14);
+  assert.deepEqual(L.patchSettings(stored, {}, { dueSoonDays: '200' }).rejected, ['dueSoonDays']);
+  assert.deepEqual(L.patchSettings(stored, {}, { toString: 'x' }).rejected, ['toString']);
+});
