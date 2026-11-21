@@ -78,3 +78,34 @@ test('サンプルは今日を変えても 3 つの状態が出る', () => {
   const s = L.buildSample('ja', '2028-02-29', () => 'id' + (++n));
   assert.equal(new Set(L.listDues(s.records, s.equipment, '2028-02-29', 30).map((d) => d.status)).size, 3);
 });
+test('写真の id が重複していたら後のものを捨てる', () => {
+  const o = good();
+  o.photos.push(meta({ ownerType: 'record', ownerId: 'r1' }));
+  o.records[0].photoIds = ['p1'];
+  const r = L.validateImport(o, ['data.json', 'photos/p1.jpg']);
+  assert.deepEqual(r.data.photos.map((p) => [p.id, p.ownerType]), [['p1', 'equipment']]);
+  assert.equal(r.dropped.photos, 1);
+  assert.deepEqual(r.data.equipment[0].photoIds, ['p1']);
+  assert.deepEqual(r.data.records[0].photoIds, []);
+});
+test('ほかの持ち主の写真と重複した id は photoIds から外す', () => {
+  const o = good();
+  o.records[0].photoIds = ['p2', 'p2'];
+  o.equipment[0].photoIds = ['p1', 'p2', 'p1'];
+  o.photos.push(meta({ id: 'p2', ownerType: 'record', ownerId: 'r1', file: 'photos/p2.jpg' }));
+  const r = L.validateImport(o, ['data.json', 'photos/p1.jpg', 'photos/p2.jpg']);
+  assert.deepEqual(r.dropped, { equipment: 0, records: 0, photos: 0 });
+  assert.deepEqual(r.data.equipment[0].photoIds, ['p1']);
+  assert.deepEqual(r.data.records[0].photoIds, ['p2']);
+});
+test('buildExport は持ち主の photoIds にある写真だけを入れる', () => {
+  const metas = [
+    { id: 'p1', ownerType: 'equipment', ownerId: 'e1', width: 1, height: 1, createdAt: 't' },
+    { id: 'p2', ownerType: 'equipment', ownerId: 'e1', width: 1, height: 1, createdAt: 't' },   // どこにも無い
+    { id: 'p3', ownerType: 'record', ownerId: 'r1', width: 1, height: 1, createdAt: 't' },
+    { id: 'p4', ownerType: 'record', ownerId: 'gone', width: 1, height: 1, createdAt: 't' },    // 持ち主が無い
+    { id: 'p5', ownerType: 'equipment', ownerId: 'e1', width: 1, height: 1, createdAt: 't' },   // 記録の photoIds にだけある
+  ];
+  const out = L.buildExport({ settings: L.DEFAULT_SETTINGS, equipment: [eq({ photoIds: ['p1'] })], records: [rec({ photoIds: ['p3', 'p5'] })], photoMetas: metas }, 'now');
+  assert.deepEqual(out.photos.map((p) => p.id), ['p1', 'p3']);
+});

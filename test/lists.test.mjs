@@ -23,7 +23,7 @@ test('sortEquipment', () => {
   const dues = [{ equipmentId: 'e3', nextDue: '2026-11-01' }, { equipmentId: 'e1', nextDue: '2026-12-02' }, { equipmentId: 'e1', nextDue: '2027-01-01' }];
   assert.deepEqual(L.sortEquipment(es, 'due', dues).map((e) => e.id), ['e3', 'e1', 'e2']);
   assert.deepEqual(L.sortEquipment(es, 'updated', dues).map((e) => e.id), ['e2', 'e1', 'e3']);
-  assert.equal(L.sortEquipment(es, 'name', dues).length, 3);
+  assert.deepEqual(L.sortEquipment(es, 'name', dues).map((e) => e.id), ['e3', 'e2', 'e1']);
   assert.equal(es[0].id, 'e1');
 });
 test('filterRecords と groupByMonth', () => {

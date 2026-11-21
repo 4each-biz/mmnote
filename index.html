@@ -122,12 +122,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tab {
-  flex: 1; min-height: max(60px, 3.8em); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  position: relative; flex: 1; min-height: max(60px, 3.8em); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   background: none; border: none; color: var(--fg-muted); cursor: pointer; font-size: var(--fs-small); padding: 4px 0;
 }
 .tab svg { width: 1.8em; height: 1.8em; fill: currentColor; }
 .tab[aria-selected="true"] { color: var(--accent); }
-.tab { position: relative; }
 /* 予定タブの期限切れの件数 */
 .tab-count {
   position: absolute; top: 4px; left: calc(50% + 0.6em); min-width: 1.6em; padding: 0 0.4em;
@@ -330,7 +329,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
 <main id="content">
   <h1 id="page-title" data-i18n="app_title"></h1>
   <div id="db-message" role="alert" hidden></div>
-  <section class="tab-pane" data-tab="equipment">
+  <section id="pane-equipment" class="tab-pane" role="tabpanel" aria-labelledby="tab-equipment" data-tab="equipment">
     <div id="equipment-list-view">
       <div id="equipment-tools" class="list-tools" hidden>
         <input id="eq-search" type="search" autocomplete="off" data-i18n-placeholder="search_equipment" data-i18n-label="search_equipment">
@@ -353,11 +352,11 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
     </div>
     <div id="equipment-detail" hidden></div>
   </section>
-  <section class="tab-pane" data-tab="dues" hidden>
+  <section id="pane-dues" class="tab-pane" role="tabpanel" aria-labelledby="tab-dues" data-tab="dues" hidden>
     <p id="dues-empty" class="empty" hidden></p>
     <div id="dues-list" class="due-groups"></div>
   </section>
-  <section class="tab-pane" data-tab="records" hidden>
+  <section id="pane-records" class="tab-pane" role="tabpanel" aria-labelledby="tab-records" data-tab="records" hidden>
     <div id="records-list-view">
       <div id="records-tools" class="list-tools" hidden>
         <input id="rec-search" type="search" autocomplete="off" data-i18n-placeholder="search_records" data-i18n-label="search_records">
@@ -369,7 +368,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
     </div>
     <div id="records-detail" hidden></div>
   </section>
-  <section class="tab-pane" data-tab="settings" hidden>
+  <section id="pane-settings" class="tab-pane" role="tabpanel" aria-labelledby="tab-settings" data-tab="settings" hidden>
     <details class="settings-section" data-section="display" open>
       <summary data-i18n="section_display"></summary>
       <div class="field">
@@ -429,14 +428,14 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
 </main>
 <footer id="status-bar">
   <span id="status-counts"></span>
-  <span id="status-message"></span>
+  <span id="status-message" role="status"></span>
   <span id="status-dot" data-level="ok"></span>
 </footer>
 <nav id="tabbar" role="tablist">
-  <button class="tab" type="button" role="tab" data-tab="equipment" aria-selected="true"><svg aria-hidden="true"><use href="#icon-build"></use></svg><span data-i18n="tab_equipment"></span></button>
-  <button class="tab" type="button" role="tab" data-tab="dues" aria-selected="false"><svg aria-hidden="true"><use href="#icon-event"></use></svg><span data-i18n="tab_dues"></span><span id="dues-count" class="tab-count" hidden></span></button>
-  <button class="tab" type="button" role="tab" data-tab="records" aria-selected="false"><svg aria-hidden="true"><use href="#icon-history"></use></svg><span data-i18n="tab_records"></span></button>
-  <button class="tab" type="button" role="tab" data-tab="settings" aria-selected="false"><svg aria-hidden="true"><use href="#icon-settings"></use></svg><span data-i18n="tab_settings"></span></button>
+  <button id="tab-equipment" class="tab" type="button" role="tab" aria-controls="pane-equipment" data-tab="equipment" aria-selected="true"><svg aria-hidden="true"><use href="#icon-build"></use></svg><span data-i18n="tab_equipment"></span></button>
+  <button id="tab-dues" class="tab" type="button" role="tab" aria-controls="pane-dues" data-tab="dues" aria-selected="false"><svg aria-hidden="true"><use href="#icon-event"></use></svg><span data-i18n="tab_dues"></span><span id="dues-count" class="tab-count" hidden></span></button>
+  <button id="tab-records" class="tab" type="button" role="tab" aria-controls="pane-records" data-tab="records" aria-selected="false"><svg aria-hidden="true"><use href="#icon-history"></use></svg><span data-i18n="tab_records"></span></button>
+  <button id="tab-settings" class="tab" type="button" role="tab" aria-controls="pane-settings" data-tab="settings" aria-selected="false"><svg aria-hidden="true"><use href="#icon-settings"></use></svg><span data-i18n="tab_settings"></span></button>
 </nav>
 <dialog id="sheet" aria-labelledby="sheet-title">
   <form id="sheet-form" method="dialog" novalidate>
@@ -736,6 +735,7 @@ const Logic = (() => {
       err_text_long: '長すぎる項目があります',
       err_db_unavailable: 'データの保存領域を開けません。プライベートブラウズでは使えないことがあります。',
       err_db_closed: 'データベースとの接続が切れました。ページを再読込してください。',
+      err_db_load: 'データを読み込めませんでした: {reason}',
       err_delete_failed: '削除できませんでした: {reason}',
       db_version_change: '別のタブでデータベースが更新されました。ページを再読込してください。',
       reload: '再読込',
@@ -829,6 +829,7 @@ const Logic = (() => {
       due_over_days: '{n} 日超過',
       due_over_day: '1 日超過',
       dues_overdue: '期限切れ',
+      dues_overdue_count: '期限切れ {n} 件',
       dues_soon: '期限間近',
       dues_later: 'それ以降',
       record_done: '実施を記録',
@@ -953,6 +954,7 @@ const Logic = (() => {
       err_text_long: 'Some fields are too long',
       err_db_unavailable: 'Cannot open the data storage. It may not be available in private browsing.',
       err_db_closed: 'The database connection was closed. Reload the page.',
+      err_db_load: 'Could not load the data: {reason}',
       err_delete_failed: 'Could not delete: {reason}',
       db_version_change: 'The database was updated in another tab. Reload the page.',
       reload: 'Reload',
@@ -1046,6 +1048,7 @@ const Logic = (() => {
       due_over_days: '{n} days over',
       due_over_day: '1 day over',
       dues_overdue: 'Overdue',
+      dues_overdue_count: '{n} overdue',
       dues_soon: 'Due soon',
       dues_later: 'Later',
       record_done: 'Record done',
@@ -1131,11 +1134,9 @@ const Logic = (() => {
 
   function t(lang, key, params) {
     const dict = I18N[lang] || I18N.ja;
-    let s = dict[key] ?? key;
-    if (params) {
-      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, () => String(v));
-    }
-    return s;
+    const s = dict[key] ?? key;
+    // 1 回で置換する(値の中に {キー} があってもそのまま出す)
+    return params ? s.replace(/\{(\w+)\}/g, (m, k) => (Object.hasOwn(params, k) ? String(params[k]) : m)) : s;
   }
 
   // ---- 日付・次回予定(時計は読まない。今日は引数で受け取る) ----
@@ -1184,7 +1185,7 @@ const Logic = (() => {
     return { recordIds: mine.map((r) => r.id), photoIds: [...(e ? e.photoIds : []), ...mine.flatMap((r) => r.photoIds)] };
   }
 
-  // 設備の絞り込み(q は大文字小文字無視の部分一致)
+  // 機器の絞り込み(q は大文字小文字無視の部分一致)
   function filterEquipment(list, { q = '', category = '' } = {}) {
     const needle = String(q).trim().toLowerCase();
     return list.filter((e) => {
@@ -1240,6 +1241,18 @@ const Logic = (() => {
     return groups;
   }
 
+  // 数の欄: 全角と桁区切りのカンマは受け付ける。空は null、数として読めなければ NaN(検証でエラーになる)
+  function parseNumber(s) {
+    let v = String(s).normalize('NFKC').trim();
+    if (v === '') return null;
+    if (v.includes(',')) {
+      // カンマは 3 桁ごとの区切りとしてだけ認める(1,5 は小数のつもりかもしれないので受け付けない)
+      if (!/^[-+]?\d{1,3}(,\d{3})+(\.\d*)?$/.test(v)) return NaN;
+      v = v.replace(/,/g, '');
+    }
+    return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(v) ? Number(v) : NaN;
+  }
+
   // ---- エクスポート / インポート ----
   const EXPORT_VERSION = 1;
   const photoFile = (id) => `photos/${id}.jpg`;
@@ -1248,7 +1261,13 @@ const Logic = (() => {
     return `mmnote-${pad(d.getFullYear(), 4)}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.zip`;
   }
 
+  // 写真は持ち主の photoIds に載っているものだけを入れる(インポートで受け付ける条件と同じ)
   function buildExport({ settings, equipment, records, photoMetas }, nowIso) {
+    const listed = new Set([
+      ...equipment.flatMap((e) => e.photoIds.map((id) => `equipment\u0000${e.id}\u0000${id}`)),
+      ...records.flatMap((r) => r.photoIds.map((id) => `record\u0000${r.id}\u0000${id}`)),
+    ]);
+    const metas = photoMetas.filter((m) => listed.has(`${m.ownerType}\u0000${m.ownerId}\u0000${m.id}`));
     return {
       app: 'mmnote',
       version: EXPORT_VERSION,
@@ -1256,7 +1275,7 @@ const Logic = (() => {
       settings: { ...settings },
       equipment,
       records,
-      photos: photoMetas.map((m) => ({ id: m.id, ownerType: m.ownerType, ownerId: m.ownerId, file: photoFile(m.id), width: m.width, height: m.height, createdAt: m.createdAt })),
+      photos: metas.map((m) => ({ id: m.id, ownerType: m.ownerType, ownerId: m.ownerId, file: photoFile(m.id), width: m.width, height: m.height, createdAt: m.createdAt })),
     };
   }
 
@@ -1389,7 +1408,7 @@ const Logic = (() => {
     CATEGORIES, KINDS, LIMITS, isDate,
     validateEquipment, validateRecord, normalizeEquipment, normalizeRecord, normalizePhotoMeta,
     toDateStr, addMonths, diffDays, activeDues, dueStatus, listDues, equipmentBadge, cascadeDelete,
-    filterEquipment, sortEquipment, filterRecords, groupByMonth,
+    filterEquipment, sortEquipment, filterRecords, groupByMonth, parseNumber,
     PHOTO, fitSize,
     I18N, t,
   };
@@ -1541,18 +1560,29 @@ const App = (() => {
     return { open, loadAll, saveEquipment, saveRecord, deleteEquipment, deleteRecord, getThumb, getPhoto, allPhotos, clear, replaceAll };
   })();
 
+  // 開けなかったとき・読めなかったときの理由(main の先頭とステータス帯に出す)
+  let dbError = { key: 'err_db_unavailable', params: null };
   async function startDb() {
     const persisted = navigator.storage?.persist?.();
     if (persisted) persisted.catch(() => {});
     try {
       await DB.open();
-      const data = await DB.loadAll();
-      state.equipment = data.equipment;
-      state.records = data.records;
-      state.db = 'ok';
+      try {
+        const data = await DB.loadAll();
+        state.equipment = data.equipment;
+        state.records = data.records;
+        state.db = 'ok';
+      } catch (err) {
+        // 開けたのに読めなかった: プライベートブラウズのせいではないので、原因をそのまま出す
+        const reason = typeof err === 'string' ? tr(err) : (err && err.message) || String(err);
+        dbError = { key: 'err_db_load', params: { reason } };
+      }
     } catch {
+      dbError = { key: 'err_db_unavailable', params: null };
+    }
+    if (state.db !== 'ok') {
       state.db = 'error';
-      setStatus('error', 'err_db_unavailable');
+      setStatus('error', dbError.key, dbError.params);
     }
     render();
   }
@@ -1699,6 +1729,10 @@ const App = (() => {
 
   function bindSheet() {
     $('#sheet-form').addEventListener('submit', (ev) => { ev.preventDefault(); submitSheet(); });
+    // 入力欄で改行キー(スマートフォンの「開く」「完了」)を押しても保存しない。保存は OK ボタンだけ
+    $('#sheet-form').addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' && !ev.isComposing && ev.target instanceof HTMLInputElement) ev.preventDefault();
+    });
     $('#sheet-body').addEventListener('input', checkSheet);
     $('#sheet-body').addEventListener('change', checkSheet);
     $('#sheet-cancel').addEventListener('click', () => { if (!sheet || !sheet.busy) closeSheet(); });
@@ -1779,9 +1813,14 @@ const App = (() => {
       });
     }
 
+    // 向きの指定を受け付けないブラウザでは、指定なしでもう一度読む
+    async function bitmapOf(blob) {
+      try { return await createImageBitmap(blob, { imageOrientation: 'from-image' }); } catch { /* 下で読み直す */ }
+      try { return await createImageBitmap(blob); } catch { throw 'photo_unreadable'; }
+    }
+
     async function prepare(file) {
-      let bmp;
-      try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { throw 'photo_unreadable'; }
+      const bmp = await bitmapOf(file);
       try {
         const full = await encode(bmp, Logic.PHOTO.max, Logic.PHOTO.quality);
         const thumb = await encode(bmp, Logic.PHOTO.thumbMax, Logic.PHOTO.thumbQuality);
@@ -1793,8 +1832,7 @@ const App = (() => {
 
     // 取り込んだ JPEG からサムネイルだけを作る(本体は作り直さない)
     async function thumbOf(blob) {
-      let bmp;
-      try { bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' }); } catch { throw 'photo_unreadable'; }
+      const bmp = await bitmapOf(blob);
       try {
         const thumb = await encode(bmp, Logic.PHOTO.thumbMax, Logic.PHOTO.thumbQuality);
         return { thumb: thumb.blob, width: bmp.width, height: bmp.height };
@@ -2291,9 +2329,10 @@ const App = (() => {
     $('#equipment-detail').replaceChildren(...parts);
   }
 
-  // 詳細の写真欄で選んだ写真は、読み終えたらすぐ保存する
+  // 詳細の写真欄で選んだ写真は、読み終えたらすぐ保存する(読み込み中はステータス帯に出す)
   async function addDetailPhotos(equipmentId, picker) {
-    if (picker.busy() || !picker.added().length) return;
+    if (picker.busy()) { setStatus('ok', 'photo_processing'); return; }
+    if (!picker.added().length) return;
     const e = state.equipment.find((x) => x.id === equipmentId);
     if (!e) return;
     const now = new Date().toISOString();
@@ -2337,8 +2376,11 @@ const App = (() => {
   }
 
   async function deleteEquipmentFlow(e) {
+    const count = Logic.cascadeDelete(e.id, state.equipment, state.records).recordIds.length;
+    if (!(await confirmDialog('confirm_delete_equipment', { name: e.name, records: count }))) return;
+    // 確認のあいだに写真が足されていてもよいように、消すものは確認のあとで決める
+    if (!state.equipment.some((x) => x.id === e.id)) return;
     const { recordIds, photoIds } = Logic.cascadeDelete(e.id, state.equipment, state.records);
-    if (!(await confirmDialog('confirm_delete_equipment', { name: e.name, records: recordIds.length }))) return;
     try {
       await DB.deleteEquipment(e.id, recordIds, photoIds);
     } catch (err) {
@@ -2360,6 +2402,17 @@ const App = (() => {
     label.htmlFor = input.id;
     wrap.append(label, input);
     return wrap;
+  }
+
+  // シートの写真欄の枠(見出しを group の名前にする)
+  function photoRow() {
+    const row = el('div', 'form-row');
+    const label = el('span', 'form-label', tr('heading_photos'));
+    label.id = 'f-photos-label';
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-labelledby', label.id);
+    row.append(label);
+    return row;
   }
 
   function textInput(value) {
@@ -2457,8 +2510,7 @@ const App = (() => {
       title: tr(existing ? 'sheet_edit_equipment' : 'sheet_add_equipment'),
       build: (body) => {
         // 写真は先頭に置く(機器の前で撮ってから書けるように)
-        const row = el('div', 'form-row');
-        row.append(el('span', 'form-label', tr('heading_photos')));
+        const row = photoRow();
         picker = photoPicker(row, { existingIds: src.photoIds, onChange: checkSheet });
         body.append(row);
         read = buildEquipmentForm(body, src);
@@ -2468,7 +2520,9 @@ const App = (() => {
         const now = new Date().toISOString();
         const id = existing ? existing.id : newId();
         const removed = picker.removedIds();
-        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: src.photoIds }, 'equipment', picker.added(), removed, now);
+        // シートを開いているあいだに詳細の写真欄から足された写真も残すように、今の機器を読み直す
+        const cur = (existing && state.equipment.find((x) => x.id === id)) || src;
+        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: cur.photoIds }, 'equipment', picker.added(), removed, now);
         const item = Logic.normalizeEquipment({
           ...read(),
           id,
@@ -2529,7 +2583,7 @@ const App = (() => {
     });
     const info = section('heading_info');
     const dl = el('dl', 'kv');
-    const meter = r.meterValue === null ? '' : `${r.meterValue.toLocaleString(locale())} ${r.meterUnit}`.trim();
+    const meter = r.meterValue === null ? '' : `${r.meterValue.toLocaleString(locale(), { maximumFractionDigits: 20 })} ${r.meterUnit}`.trim();
     const rows = [
       ['field_equipment', equipmentName(r.equipmentId)],
       ['field_date', r.date],
@@ -2556,7 +2610,8 @@ const App = (() => {
 
   // 記録の詳細で選んだ写真は、読み終えたらすぐ保存する(機器の updatedAt は変えない)
   async function addRecordDetailPhotos(recordId, picker) {
-    if (picker.busy() || !picker.added().length) return;
+    if (picker.busy()) { setStatus('ok', 'photo_processing'); return; }
+    if (!picker.added().length) return;
     const r = state.records.find((x) => x.id === recordId);
     if (!r) return;
     const now = new Date().toISOString();
@@ -2598,13 +2653,6 @@ const App = (() => {
     state.records = state.records.filter((x) => x.id !== id);
     setStatus('ok', 'deleted');
     backFromRecord();
-  }
-
-  // 数の欄: 全角と桁区切りのカンマは受け付ける。空は null、数として読めなければ NaN(検証でエラーになる)
-  function parseNumber(s) {
-    const v = s.normalize('NFKC').replace(/,/g, '').trim();
-    if (v === '') return null;
-    return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(v) ? Number(v) : NaN;
   }
 
   const QUICK_DUES = [[1, 'due_in_1m'], [3, 'due_in_3m'], [6, 'due_in_6m'], [12, 'due_in_1y']];
@@ -2704,9 +2752,9 @@ const App = (() => {
       date: date.value,
       kind: kind.value,
       title: title.value,
-      cost: parseNumber(cost.value),
+      cost: Logic.parseNumber(cost.value),
       vendor: vendor.value.trim(),
-      meterValue: parseNumber(meterValue.value),
+      meterValue: Logic.parseNumber(meterValue.value),
       meterUnit: meterUnit.value.trim(),
       nextDue: nextDue.value || null,
       note: note.value,
@@ -2731,8 +2779,7 @@ const App = (() => {
       title: tr(existing ? 'sheet_edit_record' : 'sheet_add_record'),
       build: (body) => {
         // 写真は先頭に置く(機器の前で撮ってから書けるように)
-        const row = el('div', 'form-row');
-        row.append(el('span', 'form-label', tr('heading_photos')));
+        const row = photoRow();
         picker = photoPicker(row, { existingIds: src.photoIds, onChange: checkSheet });
         body.append(row);
         read = buildRecordForm(body, src, choose);
@@ -2747,7 +2794,9 @@ const App = (() => {
         const now = new Date().toISOString();
         const id = existing ? existing.id : newId();
         const removed = picker.removedIds();
-        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: src.photoIds }, 'record', picker.added(), removed, now);
+        // シートを開いているあいだに詳細の写真欄から足された写真も残すように、今の記録を読み直す
+        const cur = (existing && state.records.find((x) => x.id === id)) || src;
+        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: cur.photoIds }, 'record', picker.added(), removed, now);
         const item = Logic.normalizeRecord({
           ...read(),
           id,
@@ -2883,6 +2932,8 @@ const App = (() => {
     const count = $('#dues-count');
     count.textContent = overdue ? String(overdue) : '';
     count.hidden = !overdue;
+    if (overdue) count.setAttribute('aria-label', tr('dues_overdue_count', { n: overdue }));
+    else count.removeAttribute('aria-label');
   }
 
   // 日付が変わったら描き直す(1 分ごとと、表示に戻ったとき)
@@ -3001,10 +3052,14 @@ const App = (() => {
     setStatus('ok', 'data_working');
     try {
       const photos = await DB.allPhotos();
-      const obj = Logic.buildExport({ settings: state.settings, equipment: state.equipment, records: state.records, photoMetas: photos.map((p) => p.meta) }, new Date().toISOString());
+      // 設定は保存している値を書き出す(URL で一時的に指定した値は入れない)
+      const obj = Logic.buildExport({ settings: savedSettings, equipment: state.equipment, records: state.records, photoMetas: photos.map((p) => p.meta) }, new Date().toISOString());
       // JPEG は縮まないので無圧縮、data.json は圧縮
       const files = { 'data.json': [fflate.strToU8(JSON.stringify(obj, null, 2)), { level: 6 }] };
-      for (const p of photos) files[Logic.photoFile(p.meta.id)] = [new Uint8Array(await p.blob.arrayBuffer()), { level: 0 }];
+      const listed = new Set(obj.photos.map((m) => m.id));
+      for (const p of photos) {
+        if (listed.has(p.meta.id)) files[Logic.photoFile(p.meta.id)] = [new Uint8Array(await p.blob.arrayBuffer()), { level: 0 }];
+      }
       const zipped = await zipAsync(files);
       const name = Logic.exportFileName(new Date());
       const url = URL.createObjectURL(new Blob([zipped], { type: 'application/zip' }));
@@ -3022,7 +3077,7 @@ const App = (() => {
     }
   }
 
-  // 読み込み・検証・サムネイル作成をすべて終えてから書く。途中で失敗したら今のデータは変えない
+  // 読み込み・検証・サムネイル作成をすべて終え、件数を確かめてもらってから書く。途中で失敗したら今のデータは変えない
   async function importData(file) {
     setStatus('ok', 'data_working');
     let files;
@@ -3032,13 +3087,7 @@ const App = (() => {
     const result = Logic.validateImport(obj, Object.keys(files));
     if (!result.ok) { setStatus('error', result.error); return; }
     const { data, dropped } = result;
-    const counts = { equipment: data.equipment.length, records: data.records.length, photos: data.photos.length };
-    const droppedParams = { de: dropped.equipment, dr: dropped.records, dp: dropped.photos };
-    const anyDropped = () => dropped.equipment + dropped.records + dropped.photos > 0;
-    setStatus('ok', null);
-    if (!(await confirmDialog(anyDropped() ? 'confirm_import_dropped' : 'confirm_import', { ...counts, ...droppedParams }))) return;
-    setStatus('ok', 'data_working');
-    // サムネイルを作り直す。読めない写真は捨てて photoIds からも外す
+    // サムネイルを作り直す(確認に出す件数を確定させるため、確認の前に)。読めない写真は捨てて photoIds からも外す
     const blobs = new Map();
     const photos = [];
     for (const meta of data.photos) {
@@ -3054,6 +3103,12 @@ const App = (() => {
     const kept = new Set(photos.map((p) => p.id));
     const strip = (x) => ({ ...x, photoIds: x.photoIds.filter((id) => kept.has(id)) });
     const next = { equipment: data.equipment.map(strip), records: data.records.map(strip), photos };
+    const counts = { equipment: next.equipment.length, records: next.records.length, photos: photos.length };
+    const droppedParams = { de: dropped.equipment, dr: dropped.records, dp: dropped.photos };
+    const anyDropped = droppedParams.de + droppedParams.dr + droppedParams.dp > 0;
+    setStatus('ok', null);
+    if (!(await confirmDialog(anyDropped ? 'confirm_import_dropped' : 'confirm_import', { ...counts, ...droppedParams }))) return;
+    setStatus('ok', 'data_working');
     try {
       await DB.replaceAll(next, blobs);
     } catch (err) {
@@ -3077,9 +3132,9 @@ const App = (() => {
     state.view = { name: 'list' };
     state.recordsView = { name: 'list' };
     applySettings();
-    const params = { equipment: next.equipment.length, records: next.records.length, photos: photos.length, ...droppedParams, dp: dropped.photos };
+    const params = { ...counts, ...droppedParams };
     if (!stored) setStatus('warn', 'status_storage_unavailable');
-    else if (anyDropped()) setStatus('warn', 'import_done_dropped', params);
+    else if (anyDropped) setStatus('warn', 'import_done_dropped', params);
     else setStatus('ok', 'import_done', params);
     render();
   }
@@ -3217,7 +3272,7 @@ const App = (() => {
     const box = $('#db-message');
     box.hidden = state.db !== 'error' && state.db !== 'closed';
     if (state.db === 'error') {
-      box.replaceChildren(el('p', null, tr('err_db_unavailable')));
+      box.replaceChildren(el('p', null, tr(dbError.key, dbError.params)));
     } else if (state.db === 'closed') {
       const reload = el('button', 'btn', tr('reload'));
       reload.type = 'button';

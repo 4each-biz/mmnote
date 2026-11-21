@@ -58,3 +58,9 @@ test('patchSettings は不正な値を rejected に返し、何も変えない',
   assert.deepEqual(L.patchSettings(stored, {}, { dueSoonDays: '200' }).rejected, ['dueSoonDays']);
   assert.deepEqual(L.patchSettings(stored, {}, { toString: 'x' }).rejected, ['toString']);
 });
+test('t は 1 回で置換する(値の中の {キー} は置き換えない)', () => {
+  assert.equal(L.t('ja', 'confirm_delete_equipment', { name: '{records}', records: 3 }),
+    '「{records}」を削除しますか?\nこの機器の記録 3 件と写真もすべて消えます。');
+  assert.equal(L.t('en', 'status_counts', { equipment: '{records}', records: 2 }), 'Equipment {records} / Records 2');
+  assert.equal(L.t('en', 'status_counts', { equipment: 1 }), 'Equipment 1 / Records {records}');
+});

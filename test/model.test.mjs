@@ -76,3 +76,36 @@ test('fitSize', () => {
   assert.equal(L.fitSize(0, 600, 1600), null);
   assert.equal(L.fitSize(NaN, 600, 1600), null);
 });
+test('validateEquipment の上限(仕様 30 行)', () => {
+  const specs = (n) => Array.from({ length: n }, (_, i) => ({ label: `l${i}`, value: 'v' }));
+  assert.deepEqual(L.validateEquipment(eq({ specs: specs(30) })), []);
+  assert.deepEqual(L.validateEquipment(eq({ specs: specs(31) })), ['err_text_long']);
+  assert.equal(L.normalizeEquipment(eq({ specs: specs(40) })).specs.length, 30);
+});
+test('photoIds は 10 件まで', () => {
+  const ids = Array.from({ length: 12 }, (_, i) => `p${i}`);
+  assert.deepEqual(L.normalizeEquipment(eq({ photoIds: ids })).photoIds, ids.slice(0, 10));
+  assert.deepEqual(L.normalizeRecord(rec({ photoIds: ids })).photoIds, ids.slice(0, 10));
+});
+test('validateRecord の長さと計器の値', () => {
+  assert.deepEqual(L.validateRecord(rec({ title: 'あ'.repeat(80) })), []);
+  assert.deepEqual(L.validateRecord(rec({ title: 'あ'.repeat(81) })), ['err_title_long']);
+  assert.deepEqual(L.validateRecord(rec({ vendor: 'x'.repeat(201) })), ['err_text_long']);
+  assert.deepEqual(L.validateRecord(rec({ meterUnit: 'x'.repeat(9) })), ['err_text_long']);
+  assert.deepEqual(L.validateRecord(rec({ meterValue: NaN })), ['err_meter_invalid']);
+  assert.deepEqual(L.validateRecord(rec({ meterValue: '12' })), ['err_meter_invalid']);
+});
+test('parseNumber: 全角と桁区切りのカンマは受け付け、それ以外のカンマは NaN', () => {
+  assert.equal(L.parseNumber(''), null);
+  assert.equal(L.parseNumber('  '), null);
+  assert.equal(L.parseNumber('1,234'), 1234);
+  assert.equal(L.parseNumber('12,345,678.5'), 12345678.5);
+  assert.equal(L.parseNumber('１２，３４５'), 12345);
+  assert.equal(L.parseNumber('0.1234'), 0.1234);
+  assert.equal(L.parseNumber('.5'), 0.5);
+  assert.ok(Number.isNaN(L.parseNumber('1,5')));
+  assert.ok(Number.isNaN(L.parseNumber('12,34')));
+  assert.ok(Number.isNaN(L.parseNumber(',123')));
+  assert.ok(Number.isNaN(L.parseNumber('abc')));
+  assert.equal(L.parseNumber('-3'), -3);
+});
