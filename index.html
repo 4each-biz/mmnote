@@ -1840,7 +1840,7 @@ const App = (() => {
   }
 
   // 写真欄(シートと詳細で共用。持ち主の種類は問わない)。選んだ写真は呼び出し側が保存するまでメモリに持つ。
-  // onChange: 選択・取り外し・読み込みの開始と終了のたび / onOpen(id): 保存済みの写真をタップ / removable: × を出すか
+  // onChange: 選択・取り外し・読み込みの開始と終了のたび(読み込み中に dispose されても、終了のときは呼ぶ) / onOpen(id): 保存済みの写真をタップ / removable: × を出すか
   function photoPicker(container, { existingIds = [], limit = Logic.LIMITS.photos, onChange = null, onOpen = null, removable = true } = {}) {
     const removed = new Set();
     const added = []; // { blob, thumb, width, height, url }
@@ -1931,19 +1931,28 @@ const App = (() => {
       for (const f of files.slice(0, room)) {
         try {
           const p = await Photos.prepare(f);
-          if (disposed) return;
           added.push({ ...p, url: URL.createObjectURL(p.thumb) });
         } catch {
           skipped++;
         }
-        if (disposed) return;
       }
       busy = false;
       if (skipped) warn('photo_skipped', { n: skipped });
+      if (disposed) {
+        // 読み込み中に画面から外れた: 選んだ写真を捨てずに 1 回だけ渡し(詳細なら保存される)、そのあと手放す
+        Promise.resolve(onChange && onChange()).finally(release);
+        return;
+      }
       note.textContent = messages.join(' ');
       note.hidden = !messages.length;
       changed();
     });
+
+    // 選んだ写真の URL を手放す
+    function release() {
+      for (const p of added) URL.revokeObjectURL(p.url);
+      added.length = 0;
+    }
 
     draw();
     return {
@@ -1951,11 +1960,10 @@ const App = (() => {
       removedIds: () => [...removed],
       busy: () => busy,
       notice: () => notice,
-      // 選んだ写真の URL を手放す(保存しなかった写真はここで捨てる)
+      // 画面から外す。保存しなかった写真はここで捨てる。読み込み中なら、読み終えて onChange を呼んでから捨てる
       dispose() {
         disposed = true;
-        for (const p of added) URL.revokeObjectURL(p.url);
-        added.length = 0;
+        if (!busy) release();
       },
     };
   }
