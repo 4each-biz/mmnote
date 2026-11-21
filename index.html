@@ -243,6 +243,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap); align-items: center; margin-bottom: var(--gap); }
 .field > label { color: var(--fg-muted); }
 .field > input, .field > select { width: 100%; min-width: 0; }
+.data-actions { display: flex; flex-direction: column; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
+.settings-note { margin: 0 0 var(--gap); font-size: var(--fs-small); color: var(--fg-muted); }
 
 /* 入力欄とボタン */
 select, input, textarea, .btn {
@@ -388,6 +390,17 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
         <input id="set-currency" type="text" maxlength="4" autocomplete="off" data-setting="currency">
       </div>
     </details>
+    <details class="settings-section" data-section="data">
+      <summary data-i18n="section_data"></summary>
+      <div class="data-actions">
+        <button id="btn-export" class="btn" type="button" data-i18n="data_export"></button>
+        <button id="btn-import" class="btn" type="button" data-i18n="data_import"></button>
+        <input id="import-file" type="file" accept=".zip,application/zip" hidden>
+        <button id="btn-erase" class="btn danger" type="button" data-i18n="data_erase"></button>
+      </div>
+      <p id="data-usage" class="settings-note" hidden></p>
+      <p class="settings-note" data-i18n="data_ios_note"></p>
+    </details>
   </section>
   <button id="btn-add-equipment" class="fab" type="button" data-i18n-label="add_equipment" hidden><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
   <button id="btn-add-record" class="fab" type="button" data-i18n-label="add_record" hidden><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
@@ -430,6 +443,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
     <button id="viewer-close" class="btn" type="button" data-i18n="close"></button>
   </div>
 </dialog>
+<script src="vendor/fflate.js"></script>
 <script id="app-logic">
 const Logic = (() => {
   const SETTINGS_VERSION = 1;
@@ -785,6 +799,25 @@ const Logic = (() => {
       dues_later: 'それ以降',
       record_done: '実施を記録',
       empty_equipment_dues: '予定はありません。',
+      section_data: 'データ',
+      data_export: 'エクスポート(ZIP)',
+      data_import: 'インポート(ZIP)',
+      data_erase: 'すべてのデータを消去',
+      data_usage: '保存量の目安: 約 {mb} MB',
+      data_ios_note: 'iPhone・iPad では、ホーム画面のアプリとブラウザで保存場所が別になり、しばらく開かないとデータが消されることがあります。定期的にエクスポートしてください。',
+      data_working: '処理しています…',
+      export_done: 'エクスポートしました: {name}',
+      err_export_failed: 'エクスポートできませんでした: {reason}',
+      err_import_read: 'ZIP ファイルとして読めませんでした。今のデータは変わっていません。',
+      err_import_not_mmnote: 'このアプリのエクスポートファイルではありません。取り込みを中止しました。',
+      err_import_version: '対応していない版のファイルです。取り込みを中止しました。',
+      err_import_shape: 'data.json が無いか、読めません。取り込みを中止しました。',
+      err_import_failed: '取り込めませんでした: {reason}',
+      confirm_import: '機器 {equipment} 件、記録 {records} 件、写真 {photos} 枚を取り込みます。\n今のデータはすべて置き換わります。',
+      confirm_import_dropped: '機器 {equipment} 件、記録 {records} 件、写真 {photos} 枚を取り込みます(不正な機器 {de} 件・記録 {dr} 件・写真 {dp} 枚は捨てます)。\n今のデータはすべて置き換わります。',
+      import_done: '取り込みました(機器 {equipment} 件、記録 {records} 件、写真 {photos} 枚)',
+      import_done_dropped: '取り込みました(機器 {equipment} 件、記録 {records} 件、写真 {photos} 枚)。捨てた分: 機器 {de} 件、記録 {dr} 件、写真 {dp} 枚',
+      confirm_erase: 'すべての機器・記録・写真と設定を消去します。元に戻せません。\n先にエクスポートしておくことをお勧めします。',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -925,6 +958,25 @@ const Logic = (() => {
       dues_later: 'Later',
       record_done: 'Record done',
       empty_equipment_dues: 'Nothing scheduled.',
+      section_data: 'Data',
+      data_export: 'Export (ZIP)',
+      data_import: 'Import (ZIP)',
+      data_erase: 'Erase all data',
+      data_usage: 'Storage used: about {mb} MB',
+      data_ios_note: 'On iPhone and iPad, the home screen app and the browser keep separate data, and data may be removed if the app is not opened for a while. Export regularly.',
+      data_working: 'Working…',
+      export_done: 'Exported: {name}',
+      err_export_failed: 'Could not export: {reason}',
+      err_import_read: 'Could not read the file as a ZIP. Your data was not changed.',
+      err_import_not_mmnote: 'This is not an export file from this app. Import cancelled.',
+      err_import_version: 'This file version is not supported. Import cancelled.',
+      err_import_shape: 'data.json is missing or unreadable. Import cancelled.',
+      err_import_failed: 'Could not import: {reason}',
+      confirm_import: 'Import {equipment} equipment, {records} records and {photos} photos?\nAll current data will be replaced.',
+      confirm_import_dropped: 'Import {equipment} equipment, {records} records and {photos} photos? (Invalid items are skipped: {de} equipment, {dr} records, {dp} photos.)\nAll current data will be replaced.',
+      import_done: 'Imported {equipment} equipment, {records} records and {photos} photos',
+      import_done_dropped: 'Imported {equipment} equipment, {records} records and {photos} photos. Skipped: {de} equipment, {dr} records, {dp} photos',
+      confirm_erase: 'Erase all equipment, records, photos and settings? This cannot be undone.\nExporting first is recommended.',
     },
   };
 
@@ -1039,8 +1091,66 @@ const Logic = (() => {
     return groups;
   }
 
+  // ---- エクスポート / インポート ----
+  const EXPORT_VERSION = 1;
+  const photoFile = (id) => `photos/${id}.jpg`;
+
+  function exportFileName(d) {
+    return `mmnote-${pad(d.getFullYear(), 4)}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.zip`;
+  }
+
+  function buildExport({ settings, equipment, records, photoMetas }, nowIso) {
+    return {
+      app: 'mmnote',
+      version: EXPORT_VERSION,
+      exportedAt: nowIso,
+      settings: { ...settings },
+      equipment,
+      records,
+      photos: photoMetas.map((m) => ({ id: m.id, ownerType: m.ownerType, ownerId: m.ownerId, file: photoFile(m.id), width: m.width, height: m.height, createdAt: m.createdAt })),
+    };
+  }
+
+  // 正規化して null と重複 id(後のもの)を捨てる
+  function uniqueNormalized(list, normalize, extra = () => true) {
+    const out = new Map();
+    for (const raw of list) {
+      const item = normalize(raw);
+      if (item && !out.has(item.id) && extra(item, raw)) out.set(item.id, item);
+    }
+    return out;
+  }
+
+  function validateImport(obj, fileNames) {
+    if (!obj || typeof obj !== 'object' || obj.app !== 'mmnote') return { ok: false, error: 'err_import_not_mmnote' };
+    if (obj.version !== EXPORT_VERSION) return { ok: false, error: 'err_import_version' };
+    if (![obj.equipment, obj.records, obj.photos].every(Array.isArray)) return { ok: false, error: 'err_import_shape' };
+    const files = new Set(fileNames);
+    const equipment = uniqueNormalized(obj.equipment, normalizeEquipment);
+    const records = uniqueNormalized(obj.records, normalizeRecord, (r) => equipment.has(r.equipmentId));
+    const ownerOf = (p) => (p.ownerType === 'equipment' ? equipment : records).get(p.ownerId);
+    // 写真: ファイル名が id と一致して ZIP にあり、持ち主がいて、持ち主の photoIds に入っているものだけ
+    const photos = uniqueNormalized(obj.photos, normalizePhotoMeta, (p, raw) => {
+      const owner = ownerOf(p);
+      return raw.file === photoFile(p.id) && files.has(raw.file) && !!owner && owner.photoIds.includes(p.id);
+    });
+    // photoIds からは、残らなかった写真と、ほかの持ち主の写真を外す
+    const keepIds = (owner, type) => [...new Set(owner.photoIds)].filter((id) => {
+      const p = photos.get(id);
+      return p && p.ownerType === type && p.ownerId === owner.id;
+    });
+    const eqList = [...equipment.values()].map((e) => ({ ...e, photoIds: keepIds(e, 'equipment') }));
+    const recList = [...records.values()].map((r) => ({ ...r, photoIds: keepIds(r, 'record') }));
+    return {
+      ok: true,
+      data: { settings: mergeSettings(DEFAULT_SETTINGS, obj.settings), equipment: eqList, records: recList, photos: [...photos.values()] },
+      dropped: { equipment: obj.equipment.length - eqList.length, records: obj.records.length - recList.length, photos: obj.photos.length - photos.size },
+    };
+  }
+
   return {
     SETTINGS_VERSION, TABS, DEFAULT_SETTINGS, DISPLAY_ONLY_KEYS,
+    exportFileName, buildExport, validateImport, photoFile,
     mergeSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
     CATEGORIES, KINDS, LIMITS, isDate,
     validateEquipment, validateRecord, normalizeEquipment, normalizeRecord, normalizePhotoMeta,
@@ -1184,7 +1294,17 @@ const App = (() => {
     const getPhoto = async (id) => withMeta(await read('photos', (s) => s.get(id)));
     const allPhotos = async () => (await read('photos', (s) => s.getAll())).map(withMeta).filter(Boolean);
 
-    return { open, loadAll, saveEquipment, saveRecord, deleteEquipment, deleteRecord, getThumb, getPhoto, allPhotos };
+    const ALL_STORES = ['equipment', 'records', 'photos', 'thumbs'];
+    const clear = () => write(ALL_STORES, (tx) => { for (const s of ALL_STORES) tx.objectStore(s).clear(); });
+    // 全ストアを空にして書き直す(1 トランザクション。失敗すれば元のまま)
+    const replaceAll = (data, photoBlobs) => write(ALL_STORES, (tx) => {
+      for (const s of ALL_STORES) tx.objectStore(s).clear();
+      for (const e of data.equipment) tx.objectStore('equipment').put(e);
+      for (const r of data.records) tx.objectStore('records').put(r);
+      writePhotos(tx, data.photos.map((meta) => ({ meta, ...photoBlobs.get(meta.id) })), []);
+    });
+
+    return { open, loadAll, saveEquipment, saveRecord, deleteEquipment, deleteRecord, getThumb, getPhoto, allPhotos, clear, replaceAll };
   })();
 
   async function startDb() {
@@ -1423,7 +1543,19 @@ const App = (() => {
       }
     }
 
-    return { prepare };
+    // 取り込んだ JPEG からサムネイルだけを作る(本体は作り直さない)
+    async function thumbOf(blob) {
+      let bmp;
+      try { bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' }); } catch { throw 'photo_unreadable'; }
+      try {
+        const thumb = await encode(bmp, Logic.PHOTO.thumbMax, Logic.PHOTO.thumbQuality);
+        return { thumb: thumb.blob, width: bmp.width, height: bmp.height };
+      } finally {
+        bmp.close();
+      }
+    }
+
+    return { prepare, thumbOf };
   })();
 
   // 保存済みサムネイルの URL を写真 id ごとに持つ(写真を消したら手放す)
@@ -1445,6 +1577,7 @@ const App = (() => {
       p.then((u) => { if (u) URL.revokeObjectURL(u); });
     }
   }
+  const forgetAllThumbs = () => forgetThumbs([...thumbUrls.keys()]);
 
   // 選んだ写真に id と属性を付け、持ち主の新しい photoIds と一緒に返す
   function attachPhotos(owner, ownerType, picked, removedIds, now) {
@@ -2501,6 +2634,141 @@ const App = (() => {
         saveSettings({ [e.dataset.setting]: e.value });
       });
     }
+    $('#btn-export').addEventListener('click', () => runData(exportData));
+    $('#btn-import').addEventListener('click', () => $('#import-file').click());
+    $('#import-file').addEventListener('change', (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      ev.target.value = '';
+      if (file) runData(() => importData(file));
+    });
+    $('#btn-erase').addEventListener('click', () => runData(eraseAll));
+  }
+
+  // ---- データ(エクスポート / インポート / 全消去) ----
+  let dataBusy = false;
+  async function runData(fn) {
+    if (dataBusy || state.db !== 'ok') return;
+    dataBusy = true;
+    renderData();
+    try { await fn(); } finally { dataBusy = false; renderData(); }
+  }
+
+  function renderData() {
+    for (const id of ['#btn-export', '#btn-import', '#btn-erase']) $(id).disabled = dataBusy || state.db !== 'ok';
+  }
+
+  function updateUsage() {
+    const est = navigator.storage?.estimate?.();
+    if (!est) return;
+    est.then(({ usage }) => {
+      if (typeof usage !== 'number') return;
+      const p = $('#data-usage');
+      p.textContent = tr('data_usage', { mb: (usage / 1048576).toFixed(1) });
+      p.hidden = false;
+    }, () => {});
+  }
+
+  // fflate の非同期 API を Promise にする
+  const zipAsync = (files) => new Promise((resolve, reject) => fflate.zip(files, (err, out) => (err ? reject(err) : resolve(out))));
+  const unzipAsync = (u8) => new Promise((resolve, reject) => fflate.unzip(u8, (err, out) => (err ? reject(err) : resolve(out))));
+
+  async function exportData() {
+    setStatus('ok', 'data_working');
+    try {
+      const photos = await DB.allPhotos();
+      const obj = Logic.buildExport({ settings: state.settings, equipment: state.equipment, records: state.records, photoMetas: photos.map((p) => p.meta) }, new Date().toISOString());
+      // JPEG は縮まないので無圧縮、data.json は圧縮
+      const files = { 'data.json': [fflate.strToU8(JSON.stringify(obj, null, 2)), { level: 6 }] };
+      for (const p of photos) files[Logic.photoFile(p.meta.id)] = [new Uint8Array(await p.blob.arrayBuffer()), { level: 0 }];
+      const zipped = await zipAsync(files);
+      const name = Logic.exportFileName(new Date());
+      const url = URL.createObjectURL(new Blob([zipped], { type: 'application/zip' }));
+      const a = el('a');
+      a.href = url;
+      a.download = name;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      // すぐ手放すと保存が始まらない端末があるので少し待つ
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setStatus('ok', 'export_done', { name });
+    } catch (err) {
+      statusError('err_export_failed', err);
+    }
+  }
+
+  // 読み込み・検証・サムネイル作成をすべて終えてから書く。途中で失敗したら今のデータは変えない
+  async function importData(file) {
+    setStatus('ok', 'data_working');
+    let files;
+    try { files = await unzipAsync(new Uint8Array(await file.arrayBuffer())); } catch { setStatus('error', 'err_import_read'); return; }
+    let obj;
+    try { obj = JSON.parse(fflate.strFromU8(files['data.json'])); } catch { setStatus('error', 'err_import_shape'); return; }
+    const result = Logic.validateImport(obj, Object.keys(files));
+    if (!result.ok) { setStatus('error', result.error); return; }
+    const { data, dropped } = result;
+    const counts = { equipment: data.equipment.length, records: data.records.length, photos: data.photos.length };
+    const droppedParams = { de: dropped.equipment, dr: dropped.records, dp: dropped.photos };
+    const anyDropped = () => dropped.equipment + dropped.records + dropped.photos > 0;
+    setStatus('ok', null);
+    if (!(await confirmDialog(anyDropped() ? 'confirm_import_dropped' : 'confirm_import', { ...counts, ...droppedParams }))) return;
+    setStatus('ok', 'data_working');
+    // サムネイルを作り直す。読めない写真は捨てて photoIds からも外す
+    const blobs = new Map();
+    const photos = [];
+    for (const meta of data.photos) {
+      const blob = new Blob([files[Logic.photoFile(meta.id)]], { type: 'image/jpeg' });
+      try {
+        const t = await Photos.thumbOf(blob);
+        blobs.set(meta.id, { blob, thumb: t.thumb });
+        photos.push(meta.width && meta.height ? meta : { ...meta, width: t.width, height: t.height });
+      } catch {
+        dropped.photos++;
+      }
+    }
+    const kept = new Set(photos.map((p) => p.id));
+    const strip = (x) => ({ ...x, photoIds: x.photoIds.filter((id) => kept.has(id)) });
+    const next = { equipment: data.equipment.map(strip), records: data.records.map(strip), photos };
+    try {
+      await DB.replaceAll(next, blobs);
+    } catch (err) {
+      statusError('err_import_failed', err);
+      return;
+    }
+    // 書き込めたら設定も置き換え、メモリの状態を読み直す
+    state.settings = data.settings;
+    const stored = writeStored();
+    forgetAllThumbs();
+    try {
+      const loaded = await DB.loadAll();
+      state.equipment = loaded.equipment;
+      state.records = loaded.records;
+    } catch {
+      state.equipment = next.equipment;
+      state.records = next.records;
+    }
+    state.view = { name: 'list' };
+    state.recordsView = { name: 'list' };
+    applySettings();
+    const params = { equipment: next.equipment.length, records: next.records.length, photos: photos.length, ...droppedParams, dp: dropped.photos };
+    if (!stored) setStatus('warn', 'status_storage_unavailable');
+    else if (anyDropped()) setStatus('warn', 'import_done_dropped', params);
+    else setStatus('ok', 'import_done', params);
+    render();
+  }
+
+  async function eraseAll() {
+    if (!(await confirmDialog('confirm_erase'))) return;
+    try {
+      await DB.clear();
+    } catch (err) {
+      statusError('err_delete_failed', err);
+      return;
+    }
+    forgetAllThumbs();
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* 保存できない環境 */ }
+    // 初期状態から始め直す(URL のクエリも外す)
+    location.replace(location.pathname);
   }
 
   // ---- 描画とタブ ----
@@ -2514,6 +2782,8 @@ const App = (() => {
     renderEquipment(dues);
     renderDues(dues);
     renderRecords();
+    renderData();
+    if (state.tab === 'settings') updateUsage();
     showStatus();
   }
 
