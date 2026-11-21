@@ -187,14 +187,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .due-badge[data-status="overdue"], .due-days[data-status="overdue"] { color: var(--c-overdue); }
 .due-badge[data-status="soon"], .due-days[data-status="soon"] { color: var(--c-soon); }
 .due-days { flex: none; font-size: var(--fs-small); color: var(--fg-muted); }
-.due-row { display: flex; align-items: stretch; gap: calc(var(--gap) / 2); }
-.due-row > .row-item { flex: 1; min-width: 0; }
+/* 幅が足りないとき(大きな拡大率)は「実施を記録」を次の行に送る */
+.due-row { display: flex; flex-wrap: wrap; align-items: stretch; gap: calc(var(--gap) / 2); }
+.due-row > .row-item { flex: 1 1 14em; min-width: 0; }
 .due-row .row-sub { white-space: normal; overflow-wrap: anywhere; }
-.due-row > .btn { flex: none; }
+.due-row > .btn { flex: none; margin-left: auto; }
 
-/* 詳細 */
+/* 詳細。見出しは文字の幅を基準にし、大きな拡大率ではボタンのほうを縮める */
 .detail-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
-.detail-head h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-large); font-weight: 400; overflow-wrap: anywhere; }
+.detail-head h2 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--fs-large); font-weight: 400; overflow-wrap: anywhere; }
 .detail-section { margin-bottom: var(--gap); }
 .detail-section > h3 {
   margin: 0 0 calc(var(--gap) / 2); padding-bottom: 0.2em; border-bottom: 1px solid var(--border);
@@ -279,7 +280,7 @@ dialog#sheet[open] { display: flex; flex-direction: column; animation: sheet-in 
 #sheet-form { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 #sheet-title { margin: 0 0 var(--gap); font-size: var(--fs-large); font-weight: 400; outline: none; }
 #sheet-body { flex: 1; min-height: 0; overflow-y: auto; }
-#sheet-error { color: var(--error); min-height: 1.5em; margin: calc(var(--gap) / 2) 0; }
+#sheet-error { flex: none; color: var(--error); min-height: 1.5em; margin: calc(var(--gap) / 2) 0; }
 dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(--radius); }
 #confirm-message { margin: 0 0 var(--gap); white-space: pre-wrap; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: calc(var(--gap) / 2); }
