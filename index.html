@@ -84,8 +84,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .icon-btn:disabled { opacity: 0.35; cursor: default; }
 .icon-btn svg { width: 1.4em; height: 1.4em; fill: currentColor; }
 
+[hidden] { display: none !important; }
+
 /* 本文 */
-#content { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 var(--gap); }
+#content { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 var(--gap); }
+#db-message { color: var(--error); display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
+#db-message p { margin: 0; flex: 1 1 12em; }
 #page-title { margin: 0 0 calc(var(--gap) / 2); font-size: var(--fs-large); font-weight: 400; }
 .tab-pane { flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; padding-bottom: var(--gap); }
 .tab-pane[hidden] { display: none; }
@@ -116,6 +120,55 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .tab svg { width: 1.8em; height: 1.8em; fill: currentColor; }
 .tab[aria-selected="true"] { color: var(--accent); }
+
+/* 一覧と右下の追加ボタン */
+.list-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
+.list-tools > input { grid-column: 1 / -1; }
+.list-tools > input, .list-tools > select { width: 100%; min-width: 0; }
+.row-list { list-style: none; margin: 0; padding: 0 0 calc(64px * var(--zoom) + var(--gap)); display: flex; flex-direction: column; gap: calc(var(--gap) / 2); }
+.row-item {
+  display: flex; align-items: center; gap: var(--gap); width: 100%; min-height: 44px; text-align: left;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: calc(var(--gap) / 2); cursor: pointer;
+}
+.cover {
+  flex: none; width: calc(64px * var(--zoom)); aspect-ratio: 1; border-radius: calc(8px * var(--zoom));
+  background: var(--bg); border: 1px solid var(--border); color: var(--fg-muted);
+  display: grid; place-items: center; overflow: hidden;
+}
+.cover svg { width: 55%; height: 55%; fill: currentColor; }
+.row-text { flex: 1; min-width: 0; }
+.row-title, .row-sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-sub { font-size: var(--fs-small); color: var(--fg-muted); }
+.fab {
+  position: absolute; right: var(--gap); bottom: var(--gap);
+  width: max(56px, calc(56px * var(--zoom))); aspect-ratio: 1; border-radius: 50%; border: none; padding: 0;
+  background: var(--accent); color: var(--on-accent); cursor: pointer; display: grid; place-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.fab svg { width: 50%; height: 50%; fill: currentColor; }
+
+/* 詳細 */
+.detail-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
+.detail-head h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-large); font-weight: 400; overflow-wrap: anywhere; }
+.detail-section { margin-bottom: var(--gap); }
+.detail-section > h3 {
+  margin: 0 0 calc(var(--gap) / 2); padding-bottom: 0.2em; border-bottom: 1px solid var(--border);
+  font-size: var(--fs-base); font-weight: 400; color: var(--fg-muted);
+}
+.kv { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 0.3em var(--gap); margin: 0; }
+.kv dt { color: var(--fg-muted); overflow-wrap: anywhere; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.note-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* シートの入力欄 */
+.form-row { display: flex; flex-direction: column; gap: 0.2em; margin-bottom: var(--gap); }
+.form-row > label, .form-label { color: var(--fg-muted); font-size: var(--fs-small); }
+.form-row > input, .form-row > select, .form-row > textarea { width: 100%; min-width: 0; }
+.spec-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: calc(var(--gap) / 2); align-items: center; margin-bottom: calc(var(--gap) / 2); }
+.spec-row > input { width: 100%; min-width: 0; }
+.btn-icon-text { display: inline-flex; align-items: center; gap: 0.3em; }
+.btn-icon-text svg { width: 1.2em; height: 1.2em; fill: currentColor; }
 
 /* 設定タブ */
 .settings-section { border-bottom: 1px solid var(--border); padding: calc(var(--gap) / 2) 0; }
@@ -170,6 +223,14 @@ dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(
   <symbol id="icon-event" viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></symbol>
   <symbol id="icon-history" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></symbol>
   <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a8 8 0 0 0-1.7-1L15 3.3H9l-.3 2.6a8 8 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a8 8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a8 8 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></symbol>
+  <symbol id="icon-add" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
+  <symbol id="icon-arrow-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
+  <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+  <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+  <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+  <symbol id="icon-car" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></symbol>
+  <symbol id="icon-business" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></symbol>
+  <symbol id="icon-category" viewBox="0 0 24 24"><path d="M12 2l-5.5 9h11L12 2zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zM3 21.5h8v-8H3v8z"/></symbol>
 </svg>
 <header id="toolbar">
   <button id="btn-help" class="icon-btn" type="button" data-i18n-label="help"><svg aria-hidden="true"><use href="#icon-help"></use></svg></button>
@@ -180,8 +241,28 @@ dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(
 </header>
 <main id="content">
   <h1 id="page-title" data-i18n="app_title"></h1>
+  <div id="db-message" role="alert" hidden></div>
   <section class="tab-pane" data-tab="equipment">
-    <p class="empty" data-i18n="empty_equipment"></p>
+    <div id="equipment-list-view">
+      <div id="equipment-tools" class="list-tools" hidden>
+        <input id="eq-search" type="search" autocomplete="off" data-i18n-placeholder="search_equipment" data-i18n-label="search_equipment">
+        <select id="eq-category" data-i18n-label="filter_category">
+          <option value="" data-i18n="filter_all_categories"></option>
+          <option value="vehicle" data-i18n="cat_vehicle"></option>
+          <option value="machine" data-i18n="cat_machine"></option>
+          <option value="facility" data-i18n="cat_facility"></option>
+          <option value="other" data-i18n="cat_other"></option>
+        </select>
+        <select id="eq-sort" data-i18n-label="sort_label">
+          <option value="name" data-i18n="sort_name"></option>
+          <option value="due" data-i18n="sort_due"></option>
+          <option value="updated" data-i18n="sort_updated"></option>
+        </select>
+      </div>
+      <p id="equipment-empty" class="empty" hidden></p>
+      <ul id="equipment-list" class="row-list"></ul>
+    </div>
+    <div id="equipment-detail" hidden></div>
   </section>
   <section class="tab-pane" data-tab="dues" hidden>
     <p class="empty" data-i18n="empty_dues"></p>
@@ -221,6 +302,7 @@ dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(
       </div>
     </details>
   </section>
+  <button id="btn-add-equipment" class="fab" type="button" data-i18n-label="add_equipment" hidden><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
 </main>
 <footer id="status-bar">
   <span id="status-counts"></span>
@@ -468,7 +550,7 @@ const Logic = (() => {
       tab_dues: '予定',
       tab_records: '記録',
       tab_settings: '設定',
-      empty_equipment: '機器はまだありません。',
+      empty_equipment: '機器はまだありません。右下の + から追加できます。',
       empty_dues: '予定はまだありません。',
       empty_records: '記録はまだありません。',
       section_display: '表示',
@@ -497,6 +579,50 @@ const Logic = (() => {
       err_meter_invalid: '計器の値は 0 以上の数で入力してください',
       err_due_before_date: '次回予定日は実施日以降にしてください',
       err_text_long: '長すぎる項目があります',
+      err_db_unavailable: 'データの保存領域を開けません。プライベートブラウズでは使えないことがあります。',
+      err_db_closed: 'データベースとの接続が切れました。ページを再読込してください。',
+      err_delete_failed: '削除できませんでした: {reason}',
+      db_version_change: '別のタブでデータベースが更新されました。ページを再読込してください。',
+      reload: '再読込',
+      saved: '保存しました',
+      deleted: '削除しました',
+      empty_filtered: '条件に合う機器はありません。',
+      search_equipment: '名称・型番・メモなどで検索',
+      filter_category: '種別で絞り込む',
+      filter_all_categories: 'すべての種別',
+      sort_label: '並べ替え',
+      sort_name: '名称順',
+      sort_due: '期限が近い順',
+      sort_updated: '更新が新しい順',
+      cat_vehicle: '車両',
+      cat_machine: '機械',
+      cat_facility: '設備',
+      cat_other: 'その他',
+      add_equipment: '機器を追加',
+      sheet_add_equipment: '機器の追加',
+      sheet_edit_equipment: '機器の編集',
+      field_name: '名称',
+      field_category: '種別',
+      field_maker: 'メーカー',
+      field_model: '型番',
+      field_serial: '製造番号',
+      field_acquired_on: '導入日',
+      field_specs: '仕様',
+      field_note: 'メモ',
+      spec_label: '項目',
+      spec_value: '値',
+      add_spec: '行を追加',
+      remove_spec: '行を削除',
+      back: '一覧に戻る',
+      edit: '編集',
+      delete: '削除',
+      heading_photos: '写真',
+      heading_info: '基本情報',
+      heading_dues: '次回予定',
+      heading_specs: '仕様',
+      heading_note: 'メモ',
+      heading_records: '記録',
+      confirm_delete_equipment: '「{name}」を削除しますか?\nこの機器の記録 {records} 件と写真もすべて消えます。',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -509,7 +635,7 @@ const Logic = (() => {
       tab_dues: 'Due',
       tab_records: 'Records',
       tab_settings: 'Settings',
-      empty_equipment: 'No equipment yet.',
+      empty_equipment: 'No equipment yet. Add one with the + button at the bottom right.',
       empty_dues: 'Nothing is scheduled yet.',
       empty_records: 'No records yet.',
       section_display: 'Display',
@@ -538,6 +664,50 @@ const Logic = (() => {
       err_meter_invalid: 'Meter value must be a number, 0 or more',
       err_due_before_date: 'Next due must be on or after the date',
       err_text_long: 'Some fields are too long',
+      err_db_unavailable: 'Cannot open the data storage. It may not be available in private browsing.',
+      err_db_closed: 'The database connection was closed. Reload the page.',
+      err_delete_failed: 'Could not delete: {reason}',
+      db_version_change: 'The database was updated in another tab. Reload the page.',
+      reload: 'Reload',
+      saved: 'Saved',
+      deleted: 'Deleted',
+      empty_filtered: 'No equipment matches.',
+      search_equipment: 'Search name, model, notes…',
+      filter_category: 'Filter by category',
+      filter_all_categories: 'All categories',
+      sort_label: 'Sort',
+      sort_name: 'By name',
+      sort_due: 'Due soonest',
+      sort_updated: 'Recently updated',
+      cat_vehicle: 'Vehicle',
+      cat_machine: 'Machine',
+      cat_facility: 'Facility',
+      cat_other: 'Other',
+      add_equipment: 'Add equipment',
+      sheet_add_equipment: 'Add equipment',
+      sheet_edit_equipment: 'Edit equipment',
+      field_name: 'Name',
+      field_category: 'Category',
+      field_maker: 'Maker',
+      field_model: 'Model',
+      field_serial: 'Serial number',
+      field_acquired_on: 'Acquired on',
+      field_specs: 'Specifications',
+      field_note: 'Notes',
+      spec_label: 'Item',
+      spec_value: 'Value',
+      add_spec: 'Add row',
+      remove_spec: 'Remove row',
+      back: 'Back to list',
+      edit: 'Edit',
+      delete: 'Delete',
+      heading_photos: 'Photos',
+      heading_info: 'Details',
+      heading_dues: 'Next due',
+      heading_specs: 'Specifications',
+      heading_note: 'Notes',
+      heading_records: 'Records',
+      confirm_delete_equipment: 'Delete "{name}"?\nIts {records} records and all photos will also be deleted.',
     },
   };
 
@@ -686,9 +856,118 @@ const App = (() => {
     records: [],
     tab: 'equipment',
     view: { name: 'list' },
+    db: 'loading', // loading / ok / error(開けない)/ closed(別のタブが接続を切らせた)
+    equipmentFilter: { q: '', category: '', sort: 'name' },
   };
   let lastStatus = { level: 'ok', key: null, params: null };
   let idleTimer = null;
+  const today = () => Logic.toDateStr(new Date());
+
+  // ---- DB ----
+  const DB_NAME = 'mmnote';
+  const DB_VERSION = 1;
+  const newId = () => crypto.randomUUID();
+
+  const DB = (() => {
+    let db = null;
+    const request = (req) => new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    function open() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const d = req.result;
+          d.createObjectStore('equipment', { keyPath: 'id' });
+          d.createObjectStore('records', { keyPath: 'id' }).createIndex('equipmentId', 'equipmentId');
+          d.createObjectStore('photos', { keyPath: 'id' }).createIndex('ownerId', 'ownerId');
+          d.createObjectStore('thumbs', { keyPath: 'id' });
+        };
+        req.onsuccess = () => {
+          db = req.result;
+          // 別のタブが削除・更新しようとしたら、こちらは手を放して再読込を促す
+          db.onversionchange = () => { db.close(); db = null; handleDbClosed(); };
+          resolve();
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // 1 つの読み書きトランザクションで fn を実行し、完了で resolve
+    function write(stores, fn) {
+      return new Promise((resolve, reject) => {
+        if (!db) { reject('err_db_closed'); return; }
+        let tx;
+        try { tx = db.transaction(stores, 'readwrite'); } catch { reject('err_db_closed'); return; }
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error || new Error('aborted'));
+        try { fn(tx); } catch (err) { try { tx.abort(); } catch { /* 既に終わっている */ } reject(err); }
+      });
+    }
+
+    function writePhotos(tx, addPhotos, removePhotoIds) {
+      const photos = tx.objectStore('photos'), thumbs = tx.objectStore('thumbs');
+      for (const { meta, blob, thumb } of addPhotos) {
+        photos.put({ ...meta, blob });
+        thumbs.put({ id: meta.id, blob: thumb });
+      }
+      for (const id of removePhotoIds) { photos.delete(id); thumbs.delete(id); }
+    }
+
+    async function loadAll() {
+      if (!db) throw 'err_db_closed';
+      const tx = db.transaction(['equipment', 'records'], 'readonly');
+      const [eq, rec] = await Promise.all([request(tx.objectStore('equipment').getAll()), request(tx.objectStore('records').getAll())]);
+      return {
+        equipment: eq.map((x) => Logic.normalizeEquipment(x)).filter(Boolean),
+        records: rec.map((x) => Logic.normalizeRecord(x)).filter(Boolean),
+      };
+    }
+
+    const saveEquipment = (equipment, addPhotos, removePhotoIds) => write(['equipment', 'photos', 'thumbs'], (tx) => {
+      tx.objectStore('equipment').put(equipment);
+      writePhotos(tx, addPhotos, removePhotoIds);
+    });
+    const saveRecord = (record, addPhotos, removePhotoIds) => write(['records', 'photos', 'thumbs'], (tx) => {
+      tx.objectStore('records').put(record);
+      writePhotos(tx, addPhotos, removePhotoIds);
+    });
+    const deleteEquipment = (id, recordIds, photoIds) => write(['equipment', 'records', 'photos', 'thumbs'], (tx) => {
+      tx.objectStore('equipment').delete(id);
+      for (const r of recordIds) tx.objectStore('records').delete(r);
+      writePhotos(tx, [], photoIds);
+    });
+    const deleteRecord = (id, photoIds) => write(['records', 'photos', 'thumbs'], (tx) => {
+      tx.objectStore('records').delete(id);
+      writePhotos(tx, [], photoIds);
+    });
+
+    return { open, loadAll, saveEquipment, saveRecord, deleteEquipment, deleteRecord };
+  })();
+
+  async function startDb() {
+    const persisted = navigator.storage?.persist?.();
+    if (persisted) persisted.catch(() => {});
+    try {
+      await DB.open();
+      const data = await DB.loadAll();
+      state.equipment = data.equipment;
+      state.records = data.records;
+      state.db = 'ok';
+    } catch {
+      state.db = 'error';
+      setStatus('error', 'err_db_unavailable');
+    }
+    render();
+  }
+
+  function handleDbClosed() {
+    state.db = 'closed';
+    setStatus('warn', 'db_version_change');
+    render();
+  }
 
   // ---- 設定 ----
   function readStored() {
@@ -715,6 +994,7 @@ const App = (() => {
     document.title = tr('app_title');
     for (const e of $$('[data-i18n]')) e.textContent = tr(e.dataset.i18n);
     for (const e of $$('[data-i18n-label]')) e.setAttribute('aria-label', tr(e.dataset.i18nLabel));
+    for (const e of $$('[data-i18n-placeholder]')) e.placeholder = tr(e.dataset.i18nPlaceholder);
   }
 
   function applyTheme() {
@@ -840,6 +1120,315 @@ const App = (() => {
     $('#confirm').addEventListener('cancel', (ev) => { ev.preventDefault(); finishConfirm(false); });
   }
 
+  // シートの外で起きた失敗をステータス帯に出す
+  function statusError(fallbackKey, err) {
+    if (typeof err === 'string') setStatus('error', err);
+    else if (err && err.key) setStatus('error', err.key, err.params);
+    else setStatus('error', fallbackKey, { reason: (err && err.message) || String(err) });
+  }
+
+  function icon(id) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#${id}`);
+    svg.append(use);
+    return svg;
+  }
+
+  function iconButton(iconId, labelKey, onClick) {
+    const b = el('button', 'icon-btn');
+    b.type = 'button';
+    b.setAttribute('aria-label', tr(labelKey));
+    b.append(icon(iconId));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function section(headingKey) {
+    const s = el('section', 'detail-section');
+    s.append(el('h3', null, tr(headingKey)));
+    return s;
+  }
+
+  // ---- 機器タブ ----
+  const CATEGORY_ICONS = { vehicle: 'icon-car', machine: 'icon-build', facility: 'icon-business', other: 'icon-category' };
+  const dbReady = () => state.db === 'ok' || state.db === 'closed';
+  const equipmentPane = () => $('.tab-pane[data-tab="equipment"]');
+  let listScrollTop = 0;
+
+  function renderEquipment() {
+    let current = null;
+    if (state.view.name === 'equipment') {
+      current = state.equipment.find((e) => e.id === state.view.id) || null;
+      if (!current) state.view = { name: 'list' };
+    }
+    $('#equipment-list-view').hidden = !!current;
+    $('#equipment-detail').hidden = !current;
+    $('#btn-add-equipment').hidden = state.tab !== 'equipment' || !!current || !dbReady();
+    if (current) renderEquipmentDetail(current);
+    else renderEquipmentList();
+  }
+
+  function renderEquipmentList() {
+    const f = state.equipmentFilter;
+    const total = state.equipment.length;
+    $('#equipment-tools').hidden = !dbReady() || total === 0;
+    const dues = f.sort === 'due' ? Logic.listDues(state.records, state.equipment, today(), state.settings.dueSoonDays) : [];
+    const items = Logic.sortEquipment(Logic.filterEquipment(state.equipment, f), f.sort, dues);
+    const empty = $('#equipment-empty');
+    // サンプルデータへの導線は 0 件の案内の後ろに足す
+    empty.textContent = !dbReady() ? '' : total === 0 ? tr('empty_equipment') : items.length === 0 ? tr('empty_filtered') : '';
+    empty.hidden = !empty.textContent;
+    $('#equipment-list').replaceChildren(...(dbReady() ? items.map(equipmentRow) : []));
+  }
+
+  function equipmentRow(e) {
+    const li = el('li');
+    const btn = el('button', 'row-item');
+    btn.type = 'button';
+    // 表紙: 写真が無いあいだは種別のアイコン
+    const cover = el('span', 'cover');
+    cover.append(icon(CATEGORY_ICONS[e.category]));
+    const text = el('span', 'row-text');
+    text.append(el('span', 'row-title', e.name));
+    const sub = [e.maker, e.model].filter(Boolean).join(' / ');
+    if (sub) text.append(el('span', 'row-sub', sub));
+    // 予定のバッジは text の後ろに足す
+    btn.append(cover, text);
+    btn.addEventListener('click', () => showEquipment(e.id));
+    li.append(btn);
+    return li;
+  }
+
+  function showEquipment(id) {
+    if (!state.equipment.some((e) => e.id === id)) return;
+    if (state.view.name === 'list' && state.tab === 'equipment') listScrollTop = equipmentPane().scrollTop;
+    history.pushState({ equipmentId: id }, '');
+    state.tab = 'equipment';
+    state.view = { name: 'equipment', id };
+    render();
+    equipmentPane().scrollTop = 0;
+  }
+
+  function showEquipmentList() {
+    state.view = { name: 'list' };
+    render();
+    equipmentPane().scrollTop = listScrollTop;
+  }
+
+  // 詳細を開いたときに積んだ履歴があれば戻る(popstate で一覧へ)
+  function backToList() {
+    if (history.state && history.state.equipmentId) history.back();
+    else showEquipmentList();
+  }
+
+  function onPopState(ev) {
+    const id = ev.state && ev.state.equipmentId;
+    if (id && state.equipment.some((e) => e.id === id)) {
+      state.tab = 'equipment';
+      state.view = { name: 'equipment', id };
+      render();
+    } else {
+      showEquipmentList();
+    }
+  }
+
+  function renderEquipmentDetail(e) {
+    const head = el('div', 'detail-head');
+    head.append(
+      iconButton('icon-arrow-back', 'back', backToList),
+      el('h2', null, e.name),
+      iconButton('icon-edit', 'edit', () => openEquipmentSheet(e)),
+      iconButton('icon-delete', 'delete', () => deleteEquipmentFlow(e)),
+    );
+    const parts = [head];
+
+    // 写真の列はこの見出しの下に入れる
+    parts.push(section('heading_photos'));
+
+    const info = section('heading_info');
+    const dl = el('dl', 'kv');
+    const rows = [
+      ['field_category', tr(`cat_${e.category}`)],
+      ['field_maker', e.maker],
+      ['field_model', e.model],
+      ['field_serial', e.serial],
+      ['field_acquired_on', e.acquiredOn],
+    ];
+    for (const [key, value] of rows) {
+      if (!value) continue;
+      dl.append(el('dt', null, tr(key)), el('dd', null, value));
+    }
+    info.append(dl);
+    parts.push(info);
+
+    // 次回予定はこの見出しの下に入れる
+    parts.push(section('heading_dues'));
+
+    if (e.specs.length) {
+      const specs = section('heading_specs');
+      const sdl = el('dl', 'kv');
+      for (const s of e.specs) sdl.append(el('dt', null, s.label), el('dd', null, s.value));
+      specs.append(sdl);
+      parts.push(specs);
+    }
+
+    if (e.note) {
+      const note = section('heading_note');
+      note.append(el('p', 'note-text', e.note));
+      parts.push(note);
+    }
+
+    // 記録の履歴はこの見出しの下に入れる
+    parts.push(section('heading_records'));
+
+    $('#equipment-detail').replaceChildren(...parts);
+  }
+
+  async function deleteEquipmentFlow(e) {
+    const { recordIds, photoIds } = Logic.cascadeDelete(e.id, state.equipment, state.records);
+    if (!(await confirmDialog('confirm_delete_equipment', { name: e.name, records: recordIds.length }))) return;
+    try {
+      await DB.deleteEquipment(e.id, recordIds, photoIds);
+    } catch (err) {
+      statusError('err_delete_failed', err);
+      return;
+    }
+    const gone = new Set(recordIds);
+    state.equipment = state.equipment.filter((x) => x.id !== e.id);
+    state.records = state.records.filter((r) => !gone.has(r.id));
+    setStatus('ok', 'deleted');
+    backToList();
+  }
+
+  function formRow(labelKey, input) {
+    const wrap = el('div', 'form-row');
+    input.id = `f-${labelKey}`;
+    const label = el('label', null, tr(labelKey));
+    label.htmlFor = input.id;
+    wrap.append(label, input);
+    return wrap;
+  }
+
+  function textInput(value) {
+    const i = el('input');
+    i.type = 'text';
+    i.autocomplete = 'off';
+    i.value = value || '';
+    return i;
+  }
+
+  // 機器の入力欄を作り、今の入力を読む関数を返す
+  function buildEquipmentForm(body, src) {
+    const name = textInput(src.name);
+    const category = el('select');
+    for (const c of Logic.CATEGORIES) {
+      const o = el('option', null, tr(`cat_${c}`));
+      o.value = c;
+      category.append(o);
+    }
+    category.value = src.category;
+    const maker = textInput(src.maker);
+    const model = textInput(src.model);
+    const serial = textInput(src.serial);
+    const acquiredOn = el('input');
+    acquiredOn.type = 'date';
+    acquiredOn.value = src.acquiredOn || '';
+
+    // 仕様: 行の追加と削除。上限に達したら追加ボタンを無効にする
+    const specsBox = el('div', 'form-row');
+    const specsLabel = el('span', 'form-label', tr('field_specs'));
+    const specRows = el('div');
+    const addSpec = el('button', 'btn btn-icon-text');
+    addSpec.type = 'button';
+    addSpec.append(icon('icon-add'), el('span', null, tr('add_spec')));
+    const refreshSpecs = () => { addSpec.disabled = specRows.children.length >= Logic.LIMITS.specs; };
+    const specRow = (s) => {
+      const row = el('div', 'spec-row');
+      const label = textInput(s.label);
+      label.placeholder = tr('spec_label');
+      label.setAttribute('aria-label', tr('spec_label'));
+      const value = textInput(s.value);
+      value.placeholder = tr('spec_value');
+      value.setAttribute('aria-label', tr('spec_value'));
+      const remove = iconButton('icon-close', 'remove_spec', () => { row.remove(); refreshSpecs(); checkSheet(); });
+      row.append(label, value, remove);
+      return row;
+    };
+    for (const s of src.specs) specRows.append(specRow(s));
+    addSpec.addEventListener('click', () => {
+      if (specRows.children.length >= Logic.LIMITS.specs) return;
+      const row = specRow({ label: '', value: '' });
+      specRows.append(row);
+      row.querySelector('input').focus();
+      refreshSpecs();
+      checkSheet();
+    });
+    refreshSpecs();
+    specsBox.append(specsLabel, specRows, addSpec);
+
+    const note = el('textarea');
+    note.rows = 3;
+    note.value = src.note || '';
+
+    body.append(
+      formRow('field_name', name),
+      formRow('field_category', category),
+      formRow('field_maker', maker),
+      formRow('field_model', model),
+      formRow('field_serial', serial),
+      formRow('field_acquired_on', acquiredOn),
+      specsBox,
+      formRow('field_note', note),
+    );
+
+    return () => ({
+      name: name.value,
+      category: category.value,
+      maker: maker.value.trim(),
+      model: model.value.trim(),
+      serial: serial.value.trim(),
+      acquiredOn: acquiredOn.value || null,
+      specs: Array.from(specRows.children, (row) => {
+        const [l, v] = row.querySelectorAll('input');
+        return { label: l.value.trim(), value: v.value.trim() };
+      }),
+      note: note.value,
+    });
+  }
+
+  function openEquipmentSheet(existing) {
+    const src = existing || { name: '', category: 'other', maker: '', model: '', serial: '', acquiredOn: null, specs: [], note: '' };
+    let read = null;
+    openSheet({
+      title: tr(existing ? 'sheet_edit_equipment' : 'sheet_add_equipment'),
+      build: (body) => { read = buildEquipmentForm(body, src); },
+      validate: () => Logic.validateEquipment(read())[0] || null,
+      onOk: async () => {
+        const now = new Date().toISOString();
+        const item = Logic.normalizeEquipment({
+          ...read(),
+          id: existing ? existing.id : newId(),
+          photoIds: existing ? existing.photoIds : [],
+          createdAt: (existing && existing.createdAt) || now,
+          updatedAt: now,
+        });
+        await DB.saveEquipment(item, [], []);
+        state.equipment = existing ? state.equipment.map((x) => (x.id === item.id ? item : x)) : [...state.equipment, item];
+        setStatus('ok', 'saved');
+      },
+    });
+  }
+
+  function bindEquipment() {
+    $('#eq-search').addEventListener('input', (ev) => { state.equipmentFilter.q = ev.target.value; renderEquipment(); });
+    $('#eq-category').addEventListener('change', (ev) => { state.equipmentFilter.category = ev.target.value; renderEquipment(); });
+    $('#eq-sort').addEventListener('change', (ev) => { state.equipmentFilter.sort = ev.target.value; renderEquipment(); });
+    $('#btn-add-equipment').addEventListener('click', () => openEquipmentSheet(null));
+    window.addEventListener('popstate', onPopState);
+  }
+
   // ---- 設定タブ ----
   function bindSettings() {
     const zoomSel = $('#set-zoom');
@@ -861,7 +1450,25 @@ const App = (() => {
     if ($('#sheet').open) return;
     for (const b of $$('#tabbar .tab')) b.setAttribute('aria-selected', String(b.dataset.tab === state.tab));
     for (const p of $$('.tab-pane')) p.hidden = p.dataset.tab !== state.tab;
+    renderDbMessage();
+    renderEquipment();
     showStatus();
+  }
+
+  // DB が使えないときは main の先頭に理由を出す
+  function renderDbMessage() {
+    const box = $('#db-message');
+    box.hidden = state.db !== 'error' && state.db !== 'closed';
+    if (state.db === 'error') {
+      box.replaceChildren(el('p', null, tr('err_db_unavailable')));
+    } else if (state.db === 'closed') {
+      const reload = el('button', 'btn', tr('reload'));
+      reload.type = 'button';
+      reload.addEventListener('click', () => location.reload());
+      box.replaceChildren(el('p', null, tr('db_version_change')), reload);
+    } else {
+      box.replaceChildren();
+    }
   }
 
   function switchTab(name) {
@@ -900,15 +1507,19 @@ const App = (() => {
     bindToolbar();
     bindSheet();
     bindConfirm();
+    bindEquipment();
     for (const b of $$('#tabbar .tab')) b.addEventListener('click', () => switchTab(b.dataset.tab));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    // 再読込したら一覧から始める(前の詳細の履歴を持ち越さない)
+    history.replaceState(null, '');
     applySettings();
     render();
+    startDb();
   }
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { state, render, switchTab, saveSettings, setStatus, openSheet, confirmDialog };
+  return { state, render, switchTab, saveSettings, setStatus, openSheet, confirmDialog, showEquipment, openEquipmentSheet };
 })();
 </script>
 </body>
