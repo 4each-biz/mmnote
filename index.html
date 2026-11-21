@@ -24,6 +24,9 @@
   --ok: #2f9e55;
   --warn: #d99a00;
   --error: #d14343;
+  --c-overdue: #b42318;
+  --c-soon: #8a5a00;
+  --on-overdue: #ffffff;
   --backdrop: rgba(0, 0, 0, 0.45);
   --zoom: 1;
   --radius: calc(10px * var(--zoom));
@@ -42,12 +45,16 @@ html[data-theme="dark"] {
   --border: #2f353c;
   --accent: #6fb3e0;
   --on-accent: #0e1216;
+  --c-overdue: #ff8a80;
+  --c-soon: #e8b84a;
+  --on-overdue: #121519;
   --backdrop: rgba(0, 0, 0, 0.6);
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
     --bg: #121519; --bg-panel: #1b1f24; --fg: #e6e9ed; --fg-muted: #9aa3ad; --border: #2f353c;
     --accent: #6fb3e0; --on-accent: #0e1216; --backdrop: rgba(0, 0, 0, 0.6);
+    --c-overdue: #ff8a80; --c-soon: #e8b84a; --on-overdue: #121519;
   }
 }
 * { box-sizing: border-box; }
@@ -120,6 +127,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .tab svg { width: 1.8em; height: 1.8em; fill: currentColor; }
 .tab[aria-selected="true"] { color: var(--accent); }
+.tab { position: relative; }
+/* 予定タブの期限切れの件数 */
+.tab-count {
+  position: absolute; top: 4px; left: calc(50% + 0.6em); min-width: 1.6em; padding: 0 0.4em;
+  border-radius: 0.8em; background: var(--c-overdue); color: var(--on-overdue); line-height: 1.6em; text-align: center;
+}
 
 /* 一覧と右下の追加ボタン */
 .list-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
@@ -152,7 +165,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* 記録の一覧(月ごとの見出しと合計) */
 .month-groups { padding-bottom: calc(64px * var(--zoom) + var(--gap)); }
-.month-groups .row-list { padding-bottom: 0; margin-bottom: var(--gap); }
+.month-groups .row-list, .due-groups .row-list { padding-bottom: 0; margin-bottom: var(--gap); }
 .month-head {
   display: flex; justify-content: space-between; align-items: baseline; gap: var(--gap);
   margin: 0 0 calc(var(--gap) / 2); padding-bottom: 0.2em; border-bottom: 1px solid var(--border);
@@ -165,6 +178,19 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .meter-row > input { width: 100%; min-width: 0; }
 .quick-due { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
 .fixed-value { margin: 0; padding: 0.4em 0; overflow-wrap: anywhere; }
+
+/* 次回予定(バッジ・予定の行)。色だけに頼らず文言も出す */
+.due-badge {
+  display: inline-block; margin-top: 0.2em; padding: 0 0.5em; border: 1px solid currentColor; border-radius: 0.8em;
+  font-size: var(--fs-small); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top;
+}
+.due-badge[data-status="overdue"], .due-days[data-status="overdue"] { color: var(--c-overdue); }
+.due-badge[data-status="soon"], .due-days[data-status="soon"] { color: var(--c-soon); }
+.due-days { flex: none; font-size: var(--fs-small); color: var(--fg-muted); }
+.due-row { display: flex; align-items: stretch; gap: calc(var(--gap) / 2); }
+.due-row > .row-item { flex: 1; min-width: 0; }
+.due-row .row-sub { white-space: normal; overflow-wrap: anywhere; }
+.due-row > .btn { flex: none; }
 
 /* 詳細 */
 .detail-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
@@ -316,7 +342,8 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
     <div id="equipment-detail" hidden></div>
   </section>
   <section class="tab-pane" data-tab="dues" hidden>
-    <p class="empty" data-i18n="empty_dues"></p>
+    <p id="dues-empty" class="empty" hidden></p>
+    <div id="dues-list" class="due-groups"></div>
   </section>
   <section class="tab-pane" data-tab="records" hidden>
     <div id="records-list-view">
@@ -372,7 +399,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
 </footer>
 <nav id="tabbar" role="tablist">
   <button class="tab" type="button" role="tab" data-tab="equipment" aria-selected="true"><svg aria-hidden="true"><use href="#icon-build"></use></svg><span data-i18n="tab_equipment"></span></button>
-  <button class="tab" type="button" role="tab" data-tab="dues" aria-selected="false"><svg aria-hidden="true"><use href="#icon-event"></use></svg><span data-i18n="tab_dues"></span></button>
+  <button class="tab" type="button" role="tab" data-tab="dues" aria-selected="false"><svg aria-hidden="true"><use href="#icon-event"></use></svg><span data-i18n="tab_dues"></span><span id="dues-count" class="tab-count" hidden></span></button>
   <button class="tab" type="button" role="tab" data-tab="records" aria-selected="false"><svg aria-hidden="true"><use href="#icon-history"></use></svg><span data-i18n="tab_records"></span></button>
   <button class="tab" type="button" role="tab" data-tab="settings" aria-selected="false"><svg aria-hidden="true"><use href="#icon-settings"></use></svg><span data-i18n="tab_settings"></span></button>
 </nav>
@@ -747,6 +774,17 @@ const Logic = (() => {
       empty_records_need_equipment: '記録を付けるには、先に機器タブで機器を登録してください。',
       month_heading: '{y}年{m}月',
       month_total: '合計 {amount}',
+      due_overdue: '期限切れ',
+      due_today: '今日',
+      due_in_days: 'あと {n} 日',
+      due_in_day: 'あと 1 日',
+      due_over_days: '{n} 日超過',
+      due_over_day: '1 日超過',
+      dues_overdue: '期限切れ',
+      dues_soon: '期限間近',
+      dues_later: 'それ以降',
+      record_done: '実施を記録',
+      empty_equipment_dues: '予定はありません。',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -876,6 +914,17 @@ const Logic = (() => {
       empty_records_need_equipment: 'To add records, first add equipment in the Equipment tab.',
       month_heading: '{m}/{y}',
       month_total: 'Total {amount}',
+      due_overdue: 'Overdue',
+      due_today: 'Today',
+      due_in_days: '{n} days left',
+      due_in_day: '1 day left',
+      due_over_days: '{n} days over',
+      due_over_day: '1 day over',
+      dues_overdue: 'Overdue',
+      dues_soon: 'Due soon',
+      dues_later: 'Later',
+      record_done: 'Record done',
+      empty_equipment_dues: 'Nothing scheduled.',
     },
   };
 
@@ -1033,6 +1082,8 @@ const App = (() => {
   let lastStatus = { level: 'ok', key: null, params: null };
   let idleTimer = null;
   const today = () => Logic.toDateStr(new Date());
+  // 生きている予定(今日と設定から計算。描画のたびに 1 回)
+  const currentDues = () => Logic.listDues(state.records, state.equipment, today(), state.settings.dueSoonDays);
 
   // ---- DB ----
   const DB_NAME = 'mmnote';
@@ -1610,7 +1661,7 @@ const App = (() => {
   let listScrollTop = 0;
   let detailPicker = null; // 詳細に出している写真欄
 
-  function renderEquipment() {
+  function renderEquipment(dues = currentDues()) {
     // 記録の詳細が消えていたら機器の詳細へ、機器が消えていたら一覧へ
     if (state.view.name === 'record' && !state.records.some((r) => r.id === state.view.id)) {
       state.view = { name: 'equipment', id: state.view.equipmentId };
@@ -1626,26 +1677,25 @@ const App = (() => {
     if (state.view.name === 'record') {
       detailPicker = renderRecordDetail($('#equipment-detail'), state.records.find((r) => r.id === state.view.id));
     } else if (inDetail) {
-      renderEquipmentDetail(state.equipment.find((e) => e.id === state.view.id));
+      renderEquipmentDetail(state.equipment.find((e) => e.id === state.view.id), dues);
     } else {
-      renderEquipmentList();
+      renderEquipmentList(dues);
     }
   }
 
-  function renderEquipmentList() {
+  function renderEquipmentList(dues) {
     const f = state.equipmentFilter;
     const total = state.equipment.length;
     $('#equipment-tools').hidden = !dbReady() || total === 0;
-    const dues = f.sort === 'due' ? Logic.listDues(state.records, state.equipment, today(), state.settings.dueSoonDays) : [];
     const items = Logic.sortEquipment(Logic.filterEquipment(state.equipment, f), f.sort, dues);
     const empty = $('#equipment-empty');
     // サンプルデータへの導線は 0 件の案内の後ろに足す
     empty.textContent = !dbReady() ? '' : total === 0 ? tr('empty_equipment') : items.length === 0 ? tr('empty_filtered') : '';
     empty.hidden = !empty.textContent;
-    $('#equipment-list').replaceChildren(...(dbReady() ? items.map(equipmentRow) : []));
+    $('#equipment-list').replaceChildren(...(dbReady() ? items.map((e) => equipmentRow(e, dues)) : []));
   }
 
-  function equipmentRow(e) {
+  function equipmentRow(e, dues) {
     const li = el('li');
     const btn = el('button', 'row-item');
     btn.type = 'button';
@@ -1665,7 +1715,14 @@ const App = (() => {
     text.append(el('span', 'row-title', e.name));
     const sub = [e.maker, e.model].filter(Boolean).join(' / ');
     if (sub) text.append(el('span', 'row-sub', sub));
-    // 予定のバッジは text の後ろに足す
+    // 予定のバッジ: 最も早い生きている予定(later は出さない)
+    const badge = Logic.equipmentBadge(e.id, dues);
+    if (badge) {
+      const label = badge.status === 'overdue' ? tr('due_overdue') : daysText(badge);
+      const span = el('span', 'due-badge', `${label} ${tr(`kind_${badge.kind}`)}`);
+      span.dataset.status = badge.status;
+      text.append(span);
+    }
     btn.append(cover, text);
     btn.addEventListener('click', () => showEquipment(e.id));
     li.append(btn);
@@ -1748,7 +1805,7 @@ const App = (() => {
     else if (state.view.name === 'list') equipmentPane().scrollTop = listScrollTop;
   }
 
-  function renderEquipmentDetail(e) {
+  function renderEquipmentDetail(e, dues) {
     const head = el('div', 'detail-head');
     head.append(
       iconButton('icon-arrow-back', 'back', backToList),
@@ -1784,8 +1841,17 @@ const App = (() => {
     info.append(dl);
     parts.push(info);
 
-    // 次回予定はこの見出しの下に入れる
-    parts.push(section('heading_dues'));
+    // 次回予定(この機器の生きている予定を日付順)
+    const next = section('heading_dues');
+    const mineDues = dues.filter((d) => d.equipmentId === e.id);
+    if (mineDues.length) {
+      const ul = el('ul', 'row-list history-list');
+      ul.append(...mineDues.map((d) => dueRow(d, true)));
+      next.append(ul);
+    } else {
+      next.append(el('p', 'empty', tr('empty_equipment_dues')));
+    }
+    parts.push(next);
 
     if (e.specs.length) {
       const specs = section('heading_specs');
@@ -2359,6 +2425,68 @@ const App = (() => {
     window.addEventListener('popstate', onPopState);
   }
 
+  // ---- 予定タブ ----
+  // 残り日数の文言(0 日は「今日」、過ぎたら超過日数)
+  function daysText(d) {
+    if (d.days === 0) return tr('due_today');
+    if (d.days < 0) return d.days === -1 ? tr('due_over_day') : tr('due_over_days', { n: -d.days });
+    return d.days === 1 ? tr('due_in_day') : tr('due_in_days', { n: d.days });
+  }
+
+  // 予定の 1 行。inDetail なら機器の詳細の中(機器名を省き、タップで元の記録へ)、そうでなければ予定タブ(タップで機器の詳細へ)
+  function dueRow(d, inDetail) {
+    const li = el('li', 'due-row');
+    const btn = el('button', 'row-item');
+    btn.type = 'button';
+    const text = el('span', 'row-text');
+    const kind = tr(`kind_${d.kind}`);
+    if (inDetail) {
+      text.append(el('span', 'row-title', `${d.nextDue} ${kind}`), el('span', 'row-sub', d.title));
+    } else {
+      text.append(el('span', 'row-title', d.equipmentName), el('span', 'row-sub', [d.nextDue, kind, d.title].join(' · ')));
+    }
+    const days = el('span', 'due-days', daysText(d));
+    days.dataset.status = d.status;
+    btn.append(text, days);
+    btn.addEventListener('click', () => (inDetail ? showRecord(d.recordId) : showEquipment(d.equipmentId)));
+    const done = el('button', 'btn', tr('record_done'));
+    done.type = 'button';
+    done.addEventListener('click', () => openRecordSheet(null, { equipmentId: d.equipmentId, kind: d.kind, title: d.title }));
+    li.append(btn, done);
+    return li;
+  }
+
+  function renderDues(dues) {
+    const groups = dbReady() ? ['overdue', 'soon', 'later'].map((status) => ({ status, items: dues.filter((d) => d.status === status) }))
+      .filter((g) => g.items.length) : [];
+    const empty = $('#dues-empty');
+    empty.textContent = dbReady() && !groups.length ? tr('empty_dues') : '';
+    empty.hidden = !empty.textContent;
+    $('#dues-list').replaceChildren(...groups.map((g) => {
+      const wrap = el('section');
+      const head = el('h3', 'month-head');
+      head.append(el('span', null, tr(`dues_${g.status}`)), el('span', null, String(g.items.length)));
+      const ul = el('ul', 'row-list');
+      ul.append(...g.items.map((d) => dueRow(d, false)));
+      wrap.append(head, ul);
+      return wrap;
+    }));
+    // タブバーの「予定」に期限切れの件数(0 なら出さない)
+    const overdue = dues.filter((d) => d.status === 'overdue').length;
+    const count = $('#dues-count');
+    count.textContent = overdue ? String(overdue) : '';
+    count.hidden = !overdue;
+  }
+
+  // 日付が変わったら描き直す(1 分ごとと、表示に戻ったとき)
+  let shownDay = null;
+  function checkDay() {
+    const d = today();
+    if (d === shownDay) return;
+    shownDay = d;
+    render();
+  }
+
   // ---- 設定タブ ----
   function bindSettings() {
     const zoomSel = $('#set-zoom');
@@ -2381,7 +2509,10 @@ const App = (() => {
     for (const b of $$('#tabbar .tab')) b.setAttribute('aria-selected', String(b.dataset.tab === state.tab));
     for (const p of $$('.tab-pane')) p.hidden = p.dataset.tab !== state.tab;
     renderDbMessage();
-    renderEquipment();
+    shownDay = today();
+    const dues = currentDues();
+    renderEquipment(dues);
+    renderDues(dues);
     renderRecords();
     showStatus();
   }
@@ -2448,6 +2579,8 @@ const App = (() => {
     applySettings();
     render();
     startDb();
+    setInterval(checkDay, 60000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkDay(); });
   }
 
   document.addEventListener('DOMContentLoaded', init);
