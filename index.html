@@ -148,6 +148,23 @@ button, input, select, textarea { font: inherit; color: inherit; }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 .fab svg { width: 50%; height: 50%; fill: currentColor; }
+.fab:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+/* 記録の一覧(月ごとの見出しと合計) */
+.month-groups { padding-bottom: calc(64px * var(--zoom) + var(--gap)); }
+.month-groups .row-list { padding-bottom: 0; margin-bottom: var(--gap); }
+.month-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--gap);
+  margin: 0 0 calc(var(--gap) / 2); padding-bottom: 0.2em; border-bottom: 1px solid var(--border);
+  font-size: var(--fs-base); font-weight: 400; color: var(--fg-muted);
+}
+.month-total { color: var(--fg); }
+.detail-section > .section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); }
+.history-list { padding-bottom: 0; }
+.meter-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: calc(var(--gap) / 2); }
+.meter-row > input { width: 100%; min-width: 0; }
+.quick-due { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
+.fixed-value { margin: 0; padding: 0.4em 0; overflow-wrap: anywhere; }
 
 /* 詳細 */
 .detail-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
@@ -302,7 +319,16 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
     <p class="empty" data-i18n="empty_dues"></p>
   </section>
   <section class="tab-pane" data-tab="records" hidden>
-    <p class="empty" data-i18n="empty_records"></p>
+    <div id="records-list-view">
+      <div id="records-tools" class="list-tools" hidden>
+        <input id="rec-search" type="search" autocomplete="off" data-i18n-placeholder="search_records" data-i18n-label="search_records">
+        <select id="rec-kind" data-i18n-label="filter_kind"></select>
+        <select id="rec-equipment" data-i18n-label="filter_equipment"></select>
+      </div>
+      <p id="records-empty" class="empty" hidden></p>
+      <div id="records-list" class="month-groups"></div>
+    </div>
+    <div id="records-detail" hidden></div>
   </section>
   <section class="tab-pane" data-tab="settings" hidden>
     <details class="settings-section" data-section="display" open>
@@ -337,6 +363,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
     </details>
   </section>
   <button id="btn-add-equipment" class="fab" type="button" data-i18n-label="add_equipment" hidden><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
+  <button id="btn-add-record" class="fab" type="button" data-i18n-label="add_record" hidden><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
 </main>
 <footer id="status-bar">
   <span id="status-counts"></span>
@@ -687,6 +714,39 @@ const Logic = (() => {
       photo_missing: '写真を読み込めませんでした',
       confirm_delete_photo: 'この写真を削除しますか?',
       close: '閉じる',
+      kind_inspection: '点検',
+      kind_repair: '修理',
+      kind_replacement: '交換',
+      kind_cleaning: '清掃',
+      kind_other: 'その他',
+      add_record: '記録を追加',
+      sheet_add_record: '記録の追加',
+      sheet_edit_record: '記録の編集',
+      field_equipment: '機器',
+      field_date: '実施日',
+      field_kind: '区分',
+      field_title: '作業内容',
+      field_cost: '費用',
+      field_vendor: '作業者・業者',
+      field_meter: '計器の値',
+      field_meter_unit: '単位',
+      field_next_due: '次回予定日',
+      due_in_1m: '1 か月後',
+      due_in_3m: '3 か月後',
+      due_in_6m: '6 か月後',
+      due_in_1y: '1 年後',
+      err_equipment_required: '機器を選んでください',
+      go_back: '戻る',
+      confirm_delete_record: '「{title}」の記録を削除しますか?\nこの記録の写真も消えます。',
+      search_records: '作業内容・業者・メモで検索',
+      filter_kind: '区分で絞り込む',
+      filter_all_kinds: 'すべての区分',
+      filter_equipment: '機器で絞り込む',
+      filter_all_equipment: 'すべての機器',
+      empty_records_filtered: '条件に合う記録はありません。',
+      empty_records_need_equipment: '記録を付けるには、先に機器タブで機器を登録してください。',
+      month_heading: '{y}年{m}月',
+      month_total: '合計 {amount}',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -783,6 +843,39 @@ const Logic = (() => {
       photo_missing: 'Could not load the photo',
       confirm_delete_photo: 'Delete this photo?',
       close: 'Close',
+      kind_inspection: 'Inspection',
+      kind_repair: 'Repair',
+      kind_replacement: 'Replacement',
+      kind_cleaning: 'Cleaning',
+      kind_other: 'Other',
+      add_record: 'Add record',
+      sheet_add_record: 'Add record',
+      sheet_edit_record: 'Edit record',
+      field_equipment: 'Equipment',
+      field_date: 'Date',
+      field_kind: 'Type',
+      field_title: 'Work done',
+      field_cost: 'Cost',
+      field_vendor: 'Done by',
+      field_meter: 'Meter reading',
+      field_meter_unit: 'Unit',
+      field_next_due: 'Next due',
+      due_in_1m: 'In 1 month',
+      due_in_3m: 'In 3 months',
+      due_in_6m: 'In 6 months',
+      due_in_1y: 'In 1 year',
+      err_equipment_required: 'Choose the equipment',
+      go_back: 'Back',
+      confirm_delete_record: 'Delete the record "{title}"?\nIts photos will also be deleted.',
+      search_records: 'Search work, vendor, notes…',
+      filter_kind: 'Filter by type',
+      filter_all_kinds: 'All types',
+      filter_equipment: 'Filter by equipment',
+      filter_all_equipment: 'All equipment',
+      empty_records_filtered: 'No records match.',
+      empty_records_need_equipment: 'To add records, first add equipment in the Equipment tab.',
+      month_heading: '{m}/{y}',
+      month_total: 'Total {amount}',
     },
   };
 
@@ -931,9 +1024,11 @@ const App = (() => {
     equipment: [],
     records: [],
     tab: 'equipment',
-    view: { name: 'list' },
+    view: { name: 'list' }, // 機器タブ: list / equipment(id)/ record(id, equipmentId)
+    recordsView: { name: 'list' }, // 記録タブ: list / record(id)
     db: 'loading', // loading / ok / error(開けない)/ closed(別のタブが接続を切らせた)
     equipmentFilter: { q: '', category: '', sort: 'name' },
+    recordFilter: { q: '', kind: '', equipmentId: '' },
   };
   let lastStatus = { level: 'ok', key: null, params: null };
   let idleTimer = null;
@@ -1516,17 +1611,25 @@ const App = (() => {
   let detailPicker = null; // 詳細に出している写真欄
 
   function renderEquipment() {
-    let current = null;
-    if (state.view.name === 'equipment') {
-      current = state.equipment.find((e) => e.id === state.view.id) || null;
-      if (!current) state.view = { name: 'list' };
+    // 記録の詳細が消えていたら機器の詳細へ、機器が消えていたら一覧へ
+    if (state.view.name === 'record' && !state.records.some((r) => r.id === state.view.id)) {
+      state.view = { name: 'equipment', id: state.view.equipmentId };
     }
-    $('#equipment-list-view').hidden = !!current;
-    $('#equipment-detail').hidden = !current;
-    $('#btn-add-equipment').hidden = state.tab !== 'equipment' || !!current || !dbReady();
+    if (state.view.name !== 'list' && !state.equipment.some((e) => e.id === (state.view.equipmentId || state.view.id))) {
+      state.view = { name: 'list' };
+    }
+    const inDetail = state.view.name !== 'list';
+    $('#equipment-list-view').hidden = inDetail;
+    $('#equipment-detail').hidden = !inDetail;
+    $('#btn-add-equipment').hidden = state.tab !== 'equipment' || inDetail || !dbReady();
     if (detailPicker) { detailPicker.dispose(); detailPicker = null; }
-    if (current) renderEquipmentDetail(current);
-    else renderEquipmentList();
+    if (state.view.name === 'record') {
+      detailPicker = renderRecordDetail($('#equipment-detail'), state.records.find((r) => r.id === state.view.id));
+    } else if (inDetail) {
+      renderEquipmentDetail(state.equipment.find((e) => e.id === state.view.id));
+    } else {
+      renderEquipmentList();
+    }
   }
 
   function renderEquipmentList() {
@@ -1591,15 +1694,58 @@ const App = (() => {
     else showEquipmentList();
   }
 
-  function onPopState(ev) {
-    const id = ev.state && ev.state.equipmentId;
-    if (id && state.equipment.some((e) => e.id === id)) {
-      state.tab = 'equipment';
-      state.view = { name: 'equipment', id };
+  // 記録の詳細。記録タブから開けば記録タブの中、それ以外は機器タブの中(機器の詳細の上)に出す
+  let detailScrollTop = 0;
+  let recordsScrollTop = 0;
+  function showRecord(id) {
+    const r = state.records.find((x) => x.id === id);
+    if (!r) return;
+    if (state.tab === 'records') {
+      if (state.recordsView.name === 'list') recordsScrollTop = recordsPane().scrollTop;
+      history.pushState({ tab: 'records', recordId: id }, '');
+      state.recordsView = { name: 'record', id };
       render();
+      recordsPane().scrollTop = 0;
     } else {
-      showEquipmentList();
+      if (state.tab === 'equipment' && state.view.name === 'equipment') detailScrollTop = equipmentPane().scrollTop;
+      history.pushState({ equipmentId: r.equipmentId, recordId: id }, '');
+      state.tab = 'equipment';
+      state.view = { name: 'record', id, equipmentId: r.equipmentId };
+      render();
+      equipmentPane().scrollTop = 0;
     }
+  }
+
+  // 記録の詳細から戻る(積んだ履歴があればブラウザの戻ると同じ道を通る)
+  function backFromRecord() {
+    if (history.state && history.state.recordId) { history.back(); return; }
+    if (state.tab === 'records') state.recordsView = { name: 'list' };
+    else if (state.view.name === 'record') state.view = { name: 'equipment', id: state.view.equipmentId };
+    render();
+  }
+
+  function onPopState(ev) {
+    const s = ev.state || {};
+    const fromRecordsDetail = state.tab === 'records' && state.recordsView.name === 'record';
+    const fromRecordView = state.view.name === 'record';
+    if (s.tab === 'records') {
+      state.tab = 'records';
+      state.recordsView = s.recordId ? { name: 'record', id: s.recordId } : { name: 'list' };
+      render();
+      return;
+    }
+    state.recordsView = { name: 'list' };
+    if (s.equipmentId) {
+      state.view = s.recordId ? { name: 'record', id: s.recordId, equipmentId: s.equipmentId } : { name: 'equipment', id: s.equipmentId };
+      // 記録タブの詳細から戻ったときはタブを変えない
+      if (!fromRecordsDetail) state.tab = 'equipment';
+    } else {
+      state.view = { name: 'list' };
+    }
+    render();
+    if (fromRecordsDetail) recordsPane().scrollTop = recordsScrollTop;
+    else if (fromRecordView && state.view.name === 'equipment') equipmentPane().scrollTop = detailScrollTop;
+    else if (state.view.name === 'list') equipmentPane().scrollTop = listScrollTop;
   }
 
   function renderEquipmentDetail(e) {
@@ -1655,8 +1801,20 @@ const App = (() => {
       parts.push(note);
     }
 
-    // 記録の履歴はこの見出しの下に入れる
-    parts.push(section('heading_records'));
+    // 記録の履歴(新しい順)と追加ボタン
+    const hist = el('section', 'detail-section');
+    const hHead = el('h3', 'section-head');
+    hHead.append(el('span', null, tr('heading_records')), iconButton('icon-add', 'add_record', () => openRecordSheet(null, { equipmentId: e.id })));
+    hist.append(hHead);
+    const mine = Logic.groupByMonth(state.records.filter((r) => r.equipmentId === e.id)).flatMap((g) => g.records);
+    if (mine.length) {
+      const ul = el('ul', 'row-list history-list');
+      ul.append(...mine.map((r) => recordRow(r, false)));
+      hist.append(ul);
+    } else {
+      hist.append(el('p', 'empty', tr('empty_records')));
+    }
+    parts.push(hist);
 
     $('#equipment-detail').replaceChildren(...parts);
   }
@@ -1855,6 +2013,344 @@ const App = (() => {
     });
   }
 
+  // ---- 記録 ----
+  const recordsPane = () => $('.tab-pane[data-tab="records"]');
+  let recordsPicker = null; // 記録タブの詳細に出している写真欄
+  const locale = () => (state.settings.lang === 'ja' ? 'ja-JP' : 'en-US');
+  const money = (n) => `${state.settings.currency}${n.toLocaleString(locale())}`;
+  const equipmentName = (id) => (state.equipment.find((e) => e.id === id) || {}).name || '';
+  const replaceRecord = (item) => { state.records = state.records.map((x) => (x.id === item.id ? item : x)); };
+
+  function recordRow(r, withEquipment) {
+    const li = el('li');
+    const btn = el('button', 'row-item');
+    btn.type = 'button';
+    const text = el('span', 'row-text');
+    const sub = [r.date, tr(`kind_${r.kind}`), withEquipment ? equipmentName(r.equipmentId) : '', r.cost === null ? '' : money(r.cost)];
+    text.append(el('span', 'row-title', r.title), el('span', 'row-sub', sub.filter(Boolean).join(' · ')));
+    btn.append(text);
+    btn.addEventListener('click', () => showRecord(r.id));
+    li.append(btn);
+    return li;
+  }
+
+  // 記録の詳細を container に描き、写真欄を返す(呼び出し側が次の描画で dispose する)
+  function renderRecordDetail(container, r) {
+    const head = el('div', 'detail-head');
+    head.append(
+      iconButton('icon-arrow-back', 'go_back', backFromRecord),
+      el('h2', null, r.title),
+      iconButton('icon-edit', 'edit', () => openRecordSheet(r, null)),
+      iconButton('icon-delete', 'delete', () => deleteRecordFlow(r.id)),
+    );
+    const photos = section('heading_photos');
+    const picker = photoPicker(photos, {
+      existingIds: r.photoIds,
+      removable: false,
+      onOpen: (photoId) => openPhotoViewer(photoId, {
+        onDelete: async () => {
+          await removeRecordPhoto(r.id, photoId);
+          setStatus('ok', 'deleted');
+        },
+      }),
+      onChange: () => addRecordDetailPhotos(r.id, picker),
+    });
+    const info = section('heading_info');
+    const dl = el('dl', 'kv');
+    const meter = r.meterValue === null ? '' : `${r.meterValue.toLocaleString(locale())} ${r.meterUnit}`.trim();
+    const rows = [
+      ['field_equipment', equipmentName(r.equipmentId)],
+      ['field_date', r.date],
+      ['field_kind', tr(`kind_${r.kind}`)],
+      ['field_cost', r.cost === null ? '' : money(r.cost)],
+      ['field_vendor', r.vendor],
+      ['field_meter', meter],
+      ['field_next_due', r.nextDue],
+    ];
+    for (const [key, value] of rows) {
+      if (!value) continue;
+      dl.append(el('dt', null, tr(key)), el('dd', null, value));
+    }
+    info.append(dl);
+    const parts = [head, photos, info];
+    if (r.note) {
+      const note = section('heading_note');
+      note.append(el('p', 'note-text', r.note));
+      parts.push(note);
+    }
+    container.replaceChildren(...parts);
+    return picker;
+  }
+
+  // 記録の詳細で選んだ写真は、読み終えたらすぐ保存する(機器の updatedAt は変えない)
+  async function addRecordDetailPhotos(recordId, picker) {
+    if (picker.busy() || !picker.added().length) return;
+    const r = state.records.find((x) => x.id === recordId);
+    if (!r) return;
+    const now = new Date().toISOString();
+    const { photoIds, addPhotos } = attachPhotos(r, 'record', picker.added(), [], now);
+    const item = { ...r, photoIds, updatedAt: now };
+    try {
+      await DB.saveRecord(item, addPhotos, []);
+      replaceRecord(item);
+      savedStatus(picker);
+    } catch (err) {
+      statusError('err_save_failed', err);
+    }
+    render();
+  }
+
+  async function removeRecordPhoto(recordId, photoId) {
+    const r = state.records.find((x) => x.id === recordId);
+    if (!r) return;
+    const item = { ...r, photoIds: r.photoIds.filter((x) => x !== photoId), updatedAt: new Date().toISOString() };
+    await DB.saveRecord(item, [], [photoId]);
+    forgetThumbs([photoId]);
+    replaceRecord(item);
+    render();
+  }
+
+  async function deleteRecordFlow(id) {
+    const r = state.records.find((x) => x.id === id);
+    if (!r || !(await confirmDialog('confirm_delete_record', { title: r.title }))) return;
+    // 確認のあいだに写真が足されていてもよいように、今の記録を読み直す
+    const cur = state.records.find((x) => x.id === id);
+    if (!cur) return;
+    try {
+      await DB.deleteRecord(cur.id, cur.photoIds);
+    } catch (err) {
+      statusError('err_delete_failed', err);
+      return;
+    }
+    forgetThumbs(cur.photoIds);
+    state.records = state.records.filter((x) => x.id !== id);
+    setStatus('ok', 'deleted');
+    backFromRecord();
+  }
+
+  // 数の欄: 全角と桁区切りのカンマは受け付ける。空は null、数として読めなければ NaN(検証でエラーになる)
+  function parseNumber(s) {
+    const v = s.normalize('NFKC').replace(/,/g, '').trim();
+    if (v === '') return null;
+    return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(v) ? Number(v) : NaN;
+  }
+
+  const QUICK_DUES = [[1, 'due_in_1m'], [3, 'due_in_3m'], [6, 'due_in_6m'], [12, 'due_in_1y']];
+
+  // 記録の入力欄を作り、今の入力を読む関数を返す。choose なら機器を選ぶ欄、そうでなければ機器名を出すだけ
+  function buildRecordForm(body, src, choose) {
+    let equipment = null;
+    if (choose) {
+      equipment = el('select');
+      const blank = el('option', null, '');
+      blank.value = '';
+      equipment.append(blank);
+      for (const e of Logic.sortEquipment(state.equipment, 'name', [])) {
+        const o = el('option', null, e.name);
+        o.value = e.id;
+        equipment.append(o);
+      }
+      // 記録タブで機器を絞り込んでいれば、その機器を選んでおく
+      equipment.value = state.equipment.some((e) => e.id === state.recordFilter.equipmentId) ? state.recordFilter.equipmentId : '';
+      body.append(formRow('field_equipment', equipment));
+    } else {
+      const row = el('div', 'form-row');
+      row.append(el('span', 'form-label', tr('field_equipment')), el('p', 'fixed-value', equipmentName(src.equipmentId)));
+      body.append(row);
+    }
+
+    const date = el('input');
+    date.type = 'date';
+    date.value = src.date;
+    const kind = el('select');
+    for (const k of Logic.KINDS) {
+      const o = el('option', null, tr(`kind_${k}`));
+      o.value = k;
+      kind.append(o);
+    }
+    kind.value = src.kind;
+    const title = textInput(src.title);
+    const cost = textInput(src.cost === null ? '' : String(src.cost));
+    cost.inputMode = 'numeric';
+    const vendor = textInput(src.vendor);
+
+    // 計器の値と単位は 1 行に並べる
+    const meterRow = el('div', 'form-row');
+    const meterValue = textInput(src.meterValue === null ? '' : String(src.meterValue));
+    meterValue.inputMode = 'decimal';
+    meterValue.id = 'f-field_meter';
+    const meterLabel = el('label', null, tr('field_meter'));
+    meterLabel.htmlFor = meterValue.id;
+    const meterUnit = textInput(src.meterUnit);
+    meterUnit.id = 'f-field_meter_unit';
+    meterUnit.placeholder = tr('field_meter_unit');
+    meterUnit.setAttribute('aria-label', tr('field_meter_unit'));
+    const meterPair = el('div', 'meter-row');
+    meterPair.append(meterValue, meterUnit);
+    meterRow.append(meterLabel, meterPair);
+
+    // 次回予定日: 実施日を起点に N か月後を埋めるボタン(実施日が正しくないあいだは押せない)
+    const nextDue = el('input');
+    nextDue.type = 'date';
+    nextDue.value = src.nextDue || '';
+    const dueRow = formRow('field_next_due', nextDue);
+    const quick = el('div', 'quick-due');
+    const quickButtons = QUICK_DUES.map(([n, key]) => {
+      const b = el('button', 'btn', tr(key));
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        if (!Logic.isDate(date.value)) return;
+        nextDue.value = Logic.addMonths(date.value, n);
+        checkSheet();
+      });
+      return b;
+    });
+    const refreshQuick = () => { for (const b of quickButtons) b.disabled = !Logic.isDate(date.value); };
+    date.addEventListener('input', refreshQuick);
+    date.addEventListener('change', refreshQuick);
+    refreshQuick();
+    quick.append(...quickButtons);
+    dueRow.append(quick);
+
+    const note = el('textarea');
+    note.rows = 3;
+    note.value = src.note || '';
+
+    body.append(
+      formRow('field_date', date),
+      formRow('field_kind', kind),
+      formRow('field_title', title),
+      formRow('field_cost', cost),
+      formRow('field_vendor', vendor),
+      meterRow,
+      dueRow,
+      formRow('field_note', note),
+    );
+
+    return () => ({
+      equipmentId: equipment ? equipment.value : src.equipmentId,
+      date: date.value,
+      kind: kind.value,
+      title: title.value,
+      cost: parseNumber(cost.value),
+      vendor: vendor.value.trim(),
+      meterValue: parseNumber(meterValue.value),
+      meterUnit: meterUnit.value.trim(),
+      nextDue: nextDue.value || null,
+      note: note.value,
+    });
+  }
+
+  // record: 編集する記録(新規は null)。preset: 新規のときの { equipmentId, kind?, title? }。
+  // 機器は、編集のときと equipmentId を指定して開いたときは固定、指定が無ければ選ぶ
+  function openRecordSheet(existing, preset) {
+    const p = preset || {};
+    const src = existing || {
+      equipmentId: p.equipmentId || '',
+      date: today(),
+      kind: Logic.KINDS.includes(p.kind) ? p.kind : 'inspection',
+      title: p.title || '',
+      cost: null, vendor: '', meterValue: null, meterUnit: '', nextDue: null, note: '', photoIds: [],
+    };
+    const choose = !existing && !p.equipmentId;
+    let read = null;
+    let picker = null;
+    openSheet({
+      title: tr(existing ? 'sheet_edit_record' : 'sheet_add_record'),
+      build: (body) => {
+        // 写真は先頭に置く(機器の前で撮ってから書けるように)
+        const row = el('div', 'form-row');
+        row.append(el('span', 'form-label', tr('heading_photos')));
+        picker = photoPicker(row, { existingIds: src.photoIds, onChange: checkSheet });
+        body.append(row);
+        read = buildRecordForm(body, src, choose);
+      },
+      validate: () => {
+        if (picker.busy()) return 'photo_processing';
+        const v = read();
+        if (!state.equipment.some((e) => e.id === v.equipmentId)) return 'err_equipment_required';
+        return Logic.validateRecord(v)[0] || null;
+      },
+      onOk: async () => {
+        const now = new Date().toISOString();
+        const id = existing ? existing.id : newId();
+        const removed = picker.removedIds();
+        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: src.photoIds }, 'record', picker.added(), removed, now);
+        const item = Logic.normalizeRecord({
+          ...read(),
+          id,
+          photoIds,
+          createdAt: (existing && existing.createdAt) || now,
+          updatedAt: now,
+        });
+        await DB.saveRecord(item, addPhotos, removed);
+        forgetThumbs(removed);
+        state.records = existing ? state.records.map((x) => (x.id === item.id ? item : x)) : [...state.records, item];
+        savedStatus(picker);
+      },
+      onClose: () => picker.dispose(),
+    });
+  }
+
+  function fillRecordFilters() {
+    const f = state.recordFilter;
+    const option = (value, text) => { const o = el('option', null, text); o.value = value; return o; };
+    $('#rec-kind').replaceChildren(option('', tr('filter_all_kinds')), ...Logic.KINDS.map((k) => option(k, tr(`kind_${k}`))));
+    $('#rec-kind').value = f.kind;
+    $('#rec-equipment').replaceChildren(option('', tr('filter_all_equipment')),
+      ...Logic.sortEquipment(state.equipment, 'name', []).map((e) => option(e.id, e.name)));
+    $('#rec-equipment').value = f.equipmentId;
+  }
+
+  function renderRecords() {
+    const f = state.recordFilter;
+    // 絞り込みに選んでいた機器が無くなっていたら(削除・読み込み)、絞り込みを外す
+    if (f.equipmentId && !state.equipment.some((e) => e.id === f.equipmentId)) f.equipmentId = '';
+    if (state.recordsView.name === 'record' && !state.records.some((r) => r.id === state.recordsView.id)) state.recordsView = { name: 'list' };
+    const inDetail = state.recordsView.name === 'record';
+    $('#records-list-view').hidden = inDetail;
+    $('#records-detail').hidden = !inDetail;
+    const add = $('#btn-add-record');
+    add.hidden = state.tab !== 'records' || inDetail || !dbReady();
+    add.disabled = state.equipment.length === 0;
+    if (recordsPicker) { recordsPicker.dispose(); recordsPicker = null; }
+    if (inDetail) {
+      recordsPicker = renderRecordDetail($('#records-detail'), state.records.find((r) => r.id === state.recordsView.id));
+      return;
+    }
+    const total = state.records.length;
+    $('#records-tools').hidden = !dbReady() || total === 0;
+    fillRecordFilters();
+    const groups = dbReady() ? Logic.groupByMonth(Logic.filterRecords(state.records, f)) : [];
+    const empty = $('#records-empty');
+    // 機器が 0 件のときは、追加ボタンを無効にした理由をここで案内する
+    empty.textContent = !dbReady() ? ''
+      : state.equipment.length === 0 ? tr('empty_records_need_equipment')
+      : total === 0 ? tr('empty_records')
+      : groups.length === 0 ? tr('empty_records_filtered') : '';
+    empty.hidden = !empty.textContent;
+    $('#records-list').replaceChildren(...groups.map((g) => {
+      const wrap = el('section');
+      const head = el('h3', 'month-head');
+      const [y, m] = g.month.split('-');
+      head.append(
+        el('span', null, tr('month_heading', { y, m: Number(m) })),
+        el('span', 'month-total', tr('month_total', { amount: money(g.total) })),
+      );
+      const ul = el('ul', 'row-list');
+      ul.append(...g.records.map((r) => recordRow(r, true)));
+      wrap.append(head, ul);
+      return wrap;
+    }));
+  }
+
+  function bindRecords() {
+    $('#rec-search').addEventListener('input', (ev) => { state.recordFilter.q = ev.target.value; renderRecords(); });
+    $('#rec-kind').addEventListener('change', (ev) => { state.recordFilter.kind = ev.target.value; renderRecords(); });
+    $('#rec-equipment').addEventListener('change', (ev) => { state.recordFilter.equipmentId = ev.target.value; renderRecords(); });
+    $('#btn-add-record').addEventListener('click', () => { if (state.equipment.length) openRecordSheet(null, null); });
+  }
+
   function bindEquipment() {
     $('#eq-search').addEventListener('input', (ev) => { state.equipmentFilter.q = ev.target.value; renderEquipment(); });
     $('#eq-category').addEventListener('change', (ev) => { state.equipmentFilter.category = ev.target.value; renderEquipment(); });
@@ -1886,6 +2382,7 @@ const App = (() => {
     for (const p of $$('.tab-pane')) p.hidden = p.dataset.tab !== state.tab;
     renderDbMessage();
     renderEquipment();
+    renderRecords();
     showStatus();
   }
 
@@ -1943,6 +2440,7 @@ const App = (() => {
     bindConfirm();
     bindViewer();
     bindEquipment();
+    bindRecords();
     for (const b of $$('#tabbar .tab')) b.addEventListener('click', () => switchTab(b.dataset.tab));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     // 再読込したら一覧から始める(前の詳細の履歴を持ち越さない)
@@ -1954,7 +2452,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { state, render, switchTab, saveSettings, setStatus, openSheet, confirmDialog, showEquipment, openEquipmentSheet, photoPicker, openPhotoViewer };
+  return { state, render, switchTab, saveSettings, setStatus, openSheet, confirmDialog, showEquipment, openEquipmentSheet, showRecord, openRecordSheet, photoPicker, openPhotoViewer };
 })();
 </script>
 </body>
