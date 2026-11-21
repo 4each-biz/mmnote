@@ -2111,10 +2111,23 @@ const App = (() => {
     return li;
   }
 
+  // 履歴: 起動時の項目(state は null)が一覧。詳細を開くたびに { tab, equipmentId?, recordId?, depth } を積む。
+  // 詳細を積むのは開いているタブの分だけ(タブを移るときに下ろす)なので、depth 0 はいつも一覧
+  let navDepth = 0;
+  function pushNav(entry) {
+    navDepth++;
+    history.pushState({ ...entry, depth: navDepth }, '');
+  }
+  // 履歴を depth 段目まで戻す(画面は popstate で合わせる)。そこまで積んでいなければ fallback で直接変える
+  function popNavTo(depth, fallback) {
+    if (navDepth > depth) history.go(depth - navDepth);
+    else fallback();
+  }
+
   function showEquipment(id) {
     if (!state.equipment.some((e) => e.id === id)) return;
     if (state.view.name === 'list' && state.tab === 'equipment') listScrollTop = equipmentPane().scrollTop;
-    history.pushState({ equipmentId: id }, '');
+    pushNav({ tab: 'equipment', equipmentId: id });
     state.tab = 'equipment';
     state.view = { name: 'equipment', id };
     render();
@@ -2127,10 +2140,9 @@ const App = (() => {
     equipmentPane().scrollTop = listScrollTop;
   }
 
-  // 詳細を開いたときに積んだ履歴があれば戻る(popstate で一覧へ)
+  // 機器の詳細から一覧へ(積んだ履歴は一覧の項目まで下ろす)
   function backToList() {
-    if (history.state && history.state.equipmentId) history.back();
-    else showEquipmentList();
+    popNavTo(0, showEquipmentList);
   }
 
   // 記録の詳細。記録タブから開けば記録タブの中、それ以外は機器タブの中(機器の詳細の上)に出す
@@ -2141,13 +2153,13 @@ const App = (() => {
     if (!r) return;
     if (state.tab === 'records') {
       if (state.recordsView.name === 'list') recordsScrollTop = recordsPane().scrollTop;
-      history.pushState({ tab: 'records', recordId: id }, '');
+      pushNav({ tab: 'records', recordId: id });
       state.recordsView = { name: 'record', id };
       render();
       recordsPane().scrollTop = 0;
     } else {
       if (state.tab === 'equipment' && state.view.name === 'equipment') detailScrollTop = equipmentPane().scrollTop;
-      history.pushState({ equipmentId: r.equipmentId, recordId: id }, '');
+      pushNav({ tab: 'equipment', equipmentId: r.equipmentId, recordId: id });
       state.tab = 'equipment';
       state.view = { name: 'record', id, equipmentId: r.equipmentId };
       render();
@@ -2155,31 +2167,35 @@ const App = (() => {
     }
   }
 
-  // 記録の詳細から戻る(積んだ履歴があればブラウザの戻ると同じ道を通る)
+  // 記録の詳細から戻る。記録タブなら記録の一覧へ、機器タブなら機器の詳細へ
   function backFromRecord() {
-    if (history.state && history.state.recordId) { history.back(); return; }
-    if (state.tab === 'records') state.recordsView = { name: 'list' };
-    else if (state.view.name === 'record') state.view = { name: 'equipment', id: state.view.equipmentId };
-    render();
+    if (state.tab === 'records') {
+      popNavTo(0, () => { state.recordsView = { name: 'list' }; render(); });
+    } else if (state.view.name === 'record') {
+      const equipmentId = state.view.equipmentId;
+      // ふつうは 1 段下が機器の詳細。そうでなければ今の項目を機器の詳細に書き換える
+      popNavTo(1, () => {
+        if (navDepth > 0) history.replaceState({ tab: 'equipment', equipmentId, depth: navDepth }, '');
+        state.view = { name: 'equipment', id: equipmentId };
+        render();
+      });
+    }
   }
 
+  // ブラウザの戻る・進む。タブも項目に書いたものに合わせる(一覧の項目ではタブを変えない)
   function onPopState(ev) {
     const s = ev.state || {};
+    navDepth = Number.isInteger(s.depth) ? s.depth : 0;
     const fromRecordsDetail = state.tab === 'records' && state.recordsView.name === 'record';
-    const fromRecordView = state.view.name === 'record';
-    if (s.tab === 'records') {
-      state.tab = 'records';
-      state.recordsView = s.recordId ? { name: 'record', id: s.recordId } : { name: 'list' };
-      render();
-      return;
-    }
+    const fromRecordView = state.tab === 'equipment' && state.view.name === 'record';
+    state.view = { name: 'list' };
     state.recordsView = { name: 'list' };
-    if (s.equipmentId) {
+    if (s.tab === 'records' && s.recordId) {
+      state.tab = 'records';
+      state.recordsView = { name: 'record', id: s.recordId };
+    } else if (s.tab === 'equipment' && s.equipmentId) {
+      state.tab = 'equipment';
       state.view = s.recordId ? { name: 'record', id: s.recordId, equipmentId: s.equipmentId } : { name: 'equipment', id: s.equipmentId };
-      // 記録タブの詳細から戻ったときはタブを変えない
-      if (!fromRecordsDetail) state.tab = 'equipment';
-    } else {
-      state.view = { name: 'list' };
     }
     render();
     if (fromRecordsDetail) recordsPane().scrollTop = recordsScrollTop;
@@ -3204,9 +3220,25 @@ const App = (() => {
     }
   }
 
+  // 別のタブへ移るときは、離れるタブの詳細を閉じ、積んだ履歴も下ろす(あとで戻るを押しても出てこないように)
   function switchTab(name) {
     if (!Logic.TABS.includes(name)) return;
-    state.tab = name;
+    if (name !== state.tab) {
+      const leavingRecords = state.tab === 'records' && state.recordsView.name === 'record';
+      const leavingEquipment = state.tab === 'equipment' && state.view.name !== 'list';
+      state.view = { name: 'list' };
+      state.recordsView = { name: 'list' };
+      if (navDepth > 0) {
+        // popstate は起動時の項目(一覧)に着くので、画面はここで決めたとおりになる
+        history.go(-navDepth);
+        navDepth = 0;
+      }
+      state.tab = name;
+      render();
+      if (leavingRecords) recordsPane().scrollTop = recordsScrollTop;
+      if (leavingEquipment) equipmentPane().scrollTop = listScrollTop;
+      return;
+    }
     render();
   }
 
