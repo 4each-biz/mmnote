@@ -388,7 +388,7 @@ const Logic = (() => {
     return [...new Set(errs)];
   }
 
-  const isoOr = (v) => (typeof v === 'string' && v ? v : new Date().toISOString());
+  const isoOr = (v) => (typeof v === 'string' ? v : '');
   const dateOrNull = (v) => (isDate(v) ? v : null);
   const idList = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : []).slice(0, LIMITS.photos);
 

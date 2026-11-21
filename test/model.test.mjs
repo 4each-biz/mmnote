@@ -61,3 +61,10 @@ test('normalizePhotoMeta', () => {
   assert.deepEqual(L.normalizePhotoMeta({ id: 'p1', ownerType: 'record', ownerId: 'r1', width: 800, height: 600, createdAt: 't', blob: 1 }),
     { id: 'p1', ownerType: 'record', ownerId: 'r1', width: 800, height: 600, createdAt: 't' });
 });
+test('createdAt / updatedAt が無いときは空文字(時計を読まない)', () => {
+  const e = L.normalizeEquipment(eq({ createdAt: undefined, updatedAt: 5 }));
+  assert.equal(e.createdAt, ''); assert.equal(e.updatedAt, '');
+  const r = L.normalizeRecord(rec({ createdAt: null, updatedAt: undefined }));
+  assert.equal(r.createdAt, ''); assert.equal(r.updatedAt, '');
+  assert.equal(L.normalizePhotoMeta({ id: 'p1', ownerType: 'equipment', ownerId: 'e1' }).createdAt, '');
+});
