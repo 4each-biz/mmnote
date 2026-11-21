@@ -68,3 +68,11 @@ test('createdAt / updatedAt が無いときは空文字(時計を読まない)',
   assert.equal(r.createdAt, ''); assert.equal(r.updatedAt, '');
   assert.equal(L.normalizePhotoMeta({ id: 'p1', ownerType: 'equipment', ownerId: 'e1' }).createdAt, '');
 });
+test('fitSize', () => {
+  assert.deepEqual(L.fitSize(4000, 3000, 1600), { width: 1600, height: 1200 });
+  assert.deepEqual(L.fitSize(3000, 4000, 1600), { width: 1200, height: 1600 });
+  assert.deepEqual(L.fitSize(800, 600, 1600), { width: 800, height: 600 });
+  assert.deepEqual(L.fitSize(10000, 3, 1600), { width: 1600, height: 1 });
+  assert.equal(L.fitSize(0, 600, 1600), null);
+  assert.equal(L.fitSize(NaN, 600, 1600), null);
+});

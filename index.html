@@ -137,6 +137,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   display: grid; place-items: center; overflow: hidden;
 }
 .cover svg { width: 55%; height: 55%; fill: currentColor; }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .row-text { flex: 1; min-width: 0; }
 .row-title, .row-sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-sub { font-size: var(--fs-small); color: var(--fg-muted); }
@@ -169,6 +170,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .spec-row > input { width: 100%; min-width: 0; }
 .btn-icon-text { display: inline-flex; align-items: center; gap: 0.3em; }
 .btn-icon-text svg { width: 1.2em; height: 1.2em; fill: currentColor; }
+
+/* 写真欄(横並びのサムネイル) */
+.photo-strip { display: flex; gap: calc(var(--gap) / 2); overflow-x: auto; padding-bottom: 4px; }
+.photo-tile {
+  position: relative; flex: none; width: max(44px, calc(88px * var(--zoom))); aspect-ratio: 1; padding: 0;
+  border-radius: calc(8px * var(--zoom)); border: 1px solid var(--border); background: var(--bg); color: var(--fg-muted);
+  overflow: hidden; display: grid; place-items: center;
+}
+.photo-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-open { width: 100%; height: 100%; padding: 0; border: none; background: none; cursor: pointer; display: block; }
+.photo-remove {
+  position: absolute; top: 0; right: 0; width: 44px; height: 44px; padding: 0; border: none; background: none;
+  cursor: pointer; display: grid; place-items: center;
+}
+.photo-remove svg { width: 26px; height: 26px; padding: 4px; border-radius: 50%; background: rgba(0, 0, 0, 0.6); fill: #fff; }
+.photo-add { cursor: pointer; }
+.photo-add svg { width: 40%; height: 40%; fill: currentColor; }
+.photo-add:disabled { opacity: 0.4; cursor: default; }
+.photo-note { margin: 0.3em 0 0; font-size: var(--fs-small); color: var(--fg-muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* 設定タブ */
 .settings-section { border-bottom: 1px solid var(--border); padding: calc(var(--gap) / 2) 0; }
@@ -209,6 +230,18 @@ dialog#sheet[open] { display: flex; flex-direction: column; animation: sheet-in 
 dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(--radius); }
 #confirm-message { margin: 0 0 var(--gap); white-space: pre-wrap; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: calc(var(--gap) / 2); }
+/* 写真の拡大表示(全画面) */
+dialog#viewer { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: none; background: #000; color: #fff; }
+dialog#viewer[open] { display: flex; flex-direction: column; }
+#viewer-stage { position: relative; flex: 1; min-height: 0; margin-top: env(safe-area-inset-top); }
+#viewer-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+#viewer-message { margin: var(--gap); }
+#viewer .btn { color: var(--fg); }
+#viewer .btn.danger { color: var(--error); }
+.viewer-actions {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: calc(var(--gap) / 2);
+  padding: var(--gap); padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
+}
 </style>
 </head>
 <body>
@@ -231,6 +264,7 @@ dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(
   <symbol id="icon-car" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></symbol>
   <symbol id="icon-business" viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></symbol>
   <symbol id="icon-category" viewBox="0 0 24 24"><path d="M12 2l-5.5 9h11L12 2zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zM3 21.5h8v-8H3v8z"/></symbol>
+  <symbol id="icon-add-photo" viewBox="0 0 24 24"><path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm3 6V7h3V4h7l1.83 2H21c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V10h3zm7 9c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-3.2-5c0 1.77 1.43 3.2 3.2 3.2s3.2-1.43 3.2-3.2-1.43-3.2-3.2-3.2-3.2 1.43-3.2 3.2z"/></symbol>
 </svg>
 <header id="toolbar">
   <button id="btn-help" class="icon-btn" type="button" data-i18n-label="help"><svg aria-hidden="true"><use href="#icon-help"></use></svg></button>
@@ -331,6 +365,15 @@ dialog#confirm { width: min(90vw, calc(24em * var(--zoom))); border-radius: var(
   <div class="dialog-actions">
     <button id="confirm-cancel" class="btn" type="button" data-i18n="cancel"></button>
     <button id="confirm-ok" class="btn primary" type="button" data-i18n="ok"></button>
+  </div>
+</dialog>
+<dialog id="viewer" aria-labelledby="viewer-title">
+  <h2 id="viewer-title" class="visually-hidden" data-i18n="photo_viewer"></h2>
+  <div id="viewer-stage"><p id="viewer-message" role="alert"></p></div>
+  <div class="viewer-actions">
+    <button id="viewer-cover" class="btn" type="button" data-i18n="photo_make_cover"></button>
+    <button id="viewer-delete" class="btn danger" type="button" data-i18n="delete"></button>
+    <button id="viewer-close" class="btn" type="button" data-i18n="close"></button>
   </div>
 </dialog>
 <script id="app-logic">
@@ -538,6 +581,16 @@ const Logic = (() => {
     return { id: raw.id, ownerType: raw.ownerType, ownerId: raw.ownerId, width: dim(raw.width), height: dim(raw.height), createdAt: isoOr(raw.createdAt) };
   }
 
+  // ---- 写真の縮小 ----
+  const PHOTO = { max: 1600, quality: 0.85, thumbMax: 320, thumbQuality: 0.7 };
+  // 長辺が max を超えるときだけ縮小する(縦横比を保って四捨五入、最小 1)
+  function fitSize(width, height, max) {
+    const okNum = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
+    if (!okNum(width) || !okNum(height)) return null;
+    const scale = Math.min(1, max / Math.max(width, height));
+    return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+  }
+
   const I18N = {
     ja: {
       app_title: 'メンテナンス手帳',
@@ -623,6 +676,17 @@ const Logic = (() => {
       heading_note: 'メモ',
       heading_records: '記録',
       confirm_delete_equipment: '「{name}」を削除しますか?\nこの機器の記録 {records} 件と写真もすべて消えます。',
+      photo_add: '写真を追加',
+      photo_remove: '写真を外す',
+      photo_open: '写真を拡大',
+      photo_limit: '写真は {max} 枚までです。超えた分は取り込みませんでした。',
+      photo_skipped: '読めない画像 {n} 枚を飛ばしました',
+      photo_processing: '写真を読み込んでいます…',
+      photo_viewer: '写真',
+      photo_make_cover: '表紙にする',
+      photo_missing: '写真を読み込めませんでした',
+      confirm_delete_photo: 'この写真を削除しますか?',
+      close: '閉じる',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -708,6 +772,17 @@ const Logic = (() => {
       heading_note: 'Notes',
       heading_records: 'Records',
       confirm_delete_equipment: 'Delete "{name}"?\nIts {records} records and all photos will also be deleted.',
+      photo_add: 'Add photos',
+      photo_remove: 'Remove photo',
+      photo_open: 'View photo',
+      photo_limit: 'Up to {max} photos. The extra ones were not added.',
+      photo_skipped: 'Skipped {n} unreadable images',
+      photo_processing: 'Loading photos…',
+      photo_viewer: 'Photo',
+      photo_make_cover: 'Make cover',
+      photo_missing: 'Could not load the photo',
+      confirm_delete_photo: 'Delete this photo?',
+      close: 'Close',
     },
   };
 
@@ -829,6 +904,7 @@ const Logic = (() => {
     validateEquipment, validateRecord, normalizeEquipment, normalizeRecord, normalizePhotoMeta,
     toDateStr, addMonths, diffDays, activeDues, dueStatus, listDues, equipmentBadge, cascadeDelete,
     filterEquipment, sortEquipment, filterRecords, groupByMonth,
+    PHOTO, fitSize,
     I18N, t,
   };
 })();
@@ -944,7 +1020,25 @@ const App = (() => {
       writePhotos(tx, [], photoIds);
     });
 
-    return { open, loadAll, saveEquipment, saveRecord, deleteEquipment, deleteRecord };
+    // 読み取り専用で 1 ストアを読む
+    function read(store, fn) {
+      if (!db) return Promise.reject('err_db_closed');
+      let tx;
+      try { tx = db.transaction(store, 'readonly'); } catch { return Promise.reject('err_db_closed'); }
+      return request(fn(tx.objectStore(store)));
+    }
+    const withMeta = (rec) => {
+      const meta = rec && Logic.normalizePhotoMeta(rec);
+      return meta && rec.blob instanceof Blob ? { meta, blob: rec.blob } : null;
+    };
+    const getThumb = async (id) => {
+      const rec = await read('thumbs', (s) => s.get(id));
+      return rec && rec.blob instanceof Blob ? rec.blob : null;
+    };
+    const getPhoto = async (id) => withMeta(await read('photos', (s) => s.get(id)));
+    const allPhotos = async () => (await read('photos', (s) => s.getAll())).map(withMeta).filter(Boolean);
+
+    return { open, loadAll, saveEquipment, saveRecord, deleteEquipment, deleteRecord, getThumb, getPhoto, allPhotos };
   })();
 
   async function startDb() {
@@ -1052,12 +1146,12 @@ const App = (() => {
     return tr('err_save_failed', { reason: (err && err.message) || String(err) });
   }
 
-  function openSheet({ title, build, validate = null, onOk }) {
+  function openSheet({ title, build, validate = null, onOk, onClose = null }) {
     const dlg = $('#sheet');
     const body = $('#sheet-body');
     $('#sheet-title').textContent = title;
     body.replaceChildren();
-    sheet = { validate, onOk, busy: false };
+    sheet = { validate, onOk, onClose, busy: false };
     build(body);
     checkSheet();
     dlg.showModal();
@@ -1082,6 +1176,8 @@ const App = (() => {
   }
 
   function closeSheet() {
+    // 閉じるときの後始末(選んだ写真の URL を手放すなど)
+    if (sheet && sheet.onClose) sheet.onClose();
     sheet = null;
     if ($('#sheet').open) $('#sheet').close();
     render();
@@ -1151,11 +1247,273 @@ const App = (() => {
     return s;
   }
 
+  // ---- 写真 ----
+  const Photos = (() => {
+    // 長辺を max に収めて JPEG にする(透過は白で埋める)
+    function encode(bmp, max, quality) {
+      const size = Logic.fitSize(bmp.width, bmp.height, max);
+      if (!size) return Promise.reject('photo_unreadable');
+      const canvas = document.createElement('canvas');
+      canvas.width = size.width;
+      canvas.height = size.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size.width, size.height);
+      ctx.drawImage(bmp, 0, 0, size.width, size.height);
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => (blob ? resolve({ blob, ...size }) : reject('photo_unreadable')), 'image/jpeg', quality);
+      });
+    }
+
+    async function prepare(file) {
+      let bmp;
+      try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { throw 'photo_unreadable'; }
+      try {
+        const full = await encode(bmp, Logic.PHOTO.max, Logic.PHOTO.quality);
+        const thumb = await encode(bmp, Logic.PHOTO.thumbMax, Logic.PHOTO.thumbQuality);
+        return { blob: full.blob, thumb: thumb.blob, width: full.width, height: full.height };
+      } finally {
+        bmp.close();
+      }
+    }
+
+    return { prepare };
+  })();
+
+  // 保存済みサムネイルの URL を写真 id ごとに持つ(写真を消したら手放す)
+  const thumbUrls = new Map();
+  function thumbUrl(id) {
+    if (!thumbUrls.has(id)) {
+      thumbUrls.set(id, DB.getThumb(id).then((b) => b && URL.createObjectURL(b), () => null).then((u) => {
+        if (!u) thumbUrls.delete(id);
+        return u;
+      }));
+    }
+    return thumbUrls.get(id);
+  }
+  function forgetThumbs(ids) {
+    for (const id of ids) {
+      const p = thumbUrls.get(id);
+      if (!p) continue;
+      thumbUrls.delete(id);
+      p.then((u) => { if (u) URL.revokeObjectURL(u); });
+    }
+  }
+
+  // 選んだ写真に id と属性を付け、持ち主の新しい photoIds と一緒に返す
+  function attachPhotos(owner, ownerType, picked, removedIds, now) {
+    const gone = new Set(removedIds);
+    const addPhotos = picked.map((p) => ({
+      meta: { id: newId(), ownerType, ownerId: owner.id, width: p.width, height: p.height, createdAt: now },
+      blob: p.blob,
+      thumb: p.thumb,
+    }));
+    const photoIds = [...owner.photoIds.filter((id) => !gone.has(id)), ...addPhotos.map((p) => p.meta.id)];
+    return { photoIds, addPhotos };
+  }
+
+  // 写真欄(シートと詳細で共用。持ち主の種類は問わない)。選んだ写真は呼び出し側が保存するまでメモリに持つ。
+  // onChange: 選択・取り外し・読み込みの開始と終了のたび / onOpen(id): 保存済みの写真をタップ / removable: × を出すか
+  function photoPicker(container, { existingIds = [], limit = Logic.LIMITS.photos, onChange = null, onOpen = null, removable = true } = {}) {
+    const removed = new Set();
+    const added = []; // { blob, thumb, width, height, url }
+    let busy = false;
+    let disposed = false;
+    let notice = null; // 直近の選択で出した案内 { key, params }
+
+    const strip = el('div', 'photo-strip');
+    const note = el('p', 'photo-note');
+    note.hidden = true;
+    const input = el('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.hidden = true;
+    const addBtn = el('button', 'photo-tile photo-add');
+    addBtn.type = 'button';
+    addBtn.setAttribute('aria-label', tr('photo_add'));
+    addBtn.append(icon('icon-add-photo'));
+    addBtn.addEventListener('click', () => input.click());
+    container.append(strip, note, input);
+
+    const count = () => existingIds.filter((id) => !removed.has(id)).length + added.length;
+
+    function tile(fill, onRemove, onTap) {
+      const t = el('div', 'photo-tile');
+      const img = el('img');
+      img.alt = '';
+      fill(img);
+      if (onTap) {
+        const open = el('button', 'photo-open');
+        open.type = 'button';
+        open.setAttribute('aria-label', tr('photo_open'));
+        open.append(img);
+        open.addEventListener('click', onTap);
+        t.append(open);
+      } else {
+        t.append(img);
+      }
+      if (onRemove) {
+        const x = el('button', 'photo-remove');
+        x.type = 'button';
+        x.setAttribute('aria-label', tr('photo_remove'));
+        x.append(icon('icon-close'));
+        x.addEventListener('click', onRemove);
+        t.append(x);
+      }
+      return t;
+    }
+
+    function draw() {
+      const tiles = [];
+      for (const id of existingIds) {
+        if (removed.has(id)) continue;
+        tiles.push(tile(
+          (img) => { thumbUrl(id).then((u) => { if (u) img.src = u; }); },
+          removable ? () => { removed.add(id); changed(); } : null,
+          onOpen ? () => onOpen(id) : null,
+        ));
+      }
+      for (const p of added) {
+        tiles.push(tile((img) => { img.src = p.url; }, () => {
+          URL.revokeObjectURL(p.url);
+          added.splice(added.indexOf(p), 1);
+          changed();
+        }, null));
+      }
+      addBtn.disabled = busy || count() >= limit;
+      strip.replaceChildren(...tiles, addBtn);
+    }
+    function changed() {
+      draw();
+      if (onChange) onChange();
+    }
+
+    input.addEventListener('change', async () => {
+      const files = Array.from(input.files || []);
+      input.value = '';
+      if (!files.length || busy) return;
+      const room = Math.max(0, limit - count());
+      const messages = [];
+      notice = null;
+      const warn = (key, params) => { notice = { key, params }; messages.push(tr(key, params)); setStatus('warn', key, params); };
+      if (files.length > room) warn('photo_limit', { max: limit });
+      busy = true;
+      changed();
+      let skipped = 0;
+      for (const f of files.slice(0, room)) {
+        try {
+          const p = await Photos.prepare(f);
+          if (disposed) return;
+          added.push({ ...p, url: URL.createObjectURL(p.thumb) });
+        } catch {
+          skipped++;
+        }
+        if (disposed) return;
+      }
+      busy = false;
+      if (skipped) warn('photo_skipped', { n: skipped });
+      note.textContent = messages.join(' ');
+      note.hidden = !messages.length;
+      changed();
+    });
+
+    draw();
+    return {
+      added: () => added.map(({ blob, thumb, width, height }) => ({ blob, thumb, width, height })),
+      removedIds: () => [...removed],
+      busy: () => busy,
+      notice: () => notice,
+      // 選んだ写真の URL を手放す(保存しなかった写真はここで捨てる)
+      dispose() {
+        disposed = true;
+        for (const p of added) URL.revokeObjectURL(p.url);
+        added.length = 0;
+      },
+    };
+  }
+
+  // 保存できたことを知らせる。写真欄の案内(読めなかった枚数など)があればそちらを残す
+  function savedStatus(picker) {
+    const n = picker.notice();
+    if (n) setStatus('warn', n.key, n.params);
+    else setStatus('ok', 'saved');
+  }
+
+  // 写真の拡大表示。onDelete / onMakeCover は Promise を返す。渡さなければそのボタンを出さない
+  let viewer = null;
+  async function openPhotoViewer(photoId, { onDelete = null, onMakeCover = null } = {}) {
+    closeViewer();
+    const v = { url: null, onDelete, onMakeCover, busy: false };
+    viewer = v;
+    $('#viewer-message').textContent = '';
+    $('#viewer-cover').hidden = !onMakeCover;
+    $('#viewer-delete').hidden = !onDelete;
+    setViewerBusy(false);
+    $('#viewer').showModal();
+    $('#viewer-close').focus();
+    let photo = null;
+    try { photo = await DB.getPhoto(photoId); } catch { /* 下で案内する */ }
+    if (viewer !== v) return;
+    if (!photo) {
+      $('#viewer-message').textContent = tr('photo_missing');
+      return;
+    }
+    v.url = URL.createObjectURL(photo.blob);
+    const img = el('img');
+    img.alt = '';
+    img.src = v.url;
+    $('#viewer-stage').append(img);
+  }
+
+  function closeViewer() {
+    const v = viewer;
+    viewer = null;
+    if (v && v.url) URL.revokeObjectURL(v.url);
+    $('#viewer-stage').replaceChildren($('#viewer-message'));
+    if ($('#viewer').open) $('#viewer').close();
+  }
+
+  function setViewerBusy(busy) {
+    for (const id of ['#viewer-cover', '#viewer-delete']) $(id).disabled = busy;
+  }
+
+  async function viewerAction(kind) {
+    const v = viewer;
+    if (!v || v.busy) return;
+    if (kind === 'delete' && !(await confirmDialog('confirm_delete_photo'))) return;
+    if (viewer !== v) return;
+    v.busy = true;
+    setViewerBusy(true);
+    try {
+      await (kind === 'delete' ? v.onDelete() : v.onMakeCover());
+      if (viewer === v) closeViewer();
+    } catch (err) {
+      const fallback = kind === 'delete' ? 'err_delete_failed' : 'err_save_failed';
+      statusError(fallback, err);
+      if (viewer === v) $('#viewer-message').textContent = lastStatus.key ? tr(lastStatus.key, lastStatus.params) : '';
+    } finally {
+      v.busy = false;
+      if (viewer === v) setViewerBusy(false);
+    }
+  }
+
+  function bindViewer() {
+    $('#viewer-close').addEventListener('click', closeViewer);
+    $('#viewer-cover').addEventListener('click', () => viewerAction('cover'));
+    $('#viewer-delete').addEventListener('click', () => viewerAction('delete'));
+    $('#viewer').addEventListener('cancel', (ev) => {
+      ev.preventDefault();
+      if (!viewer || !viewer.busy) closeViewer();
+    });
+  }
+
   // ---- 機器タブ ----
   const CATEGORY_ICONS = { vehicle: 'icon-car', machine: 'icon-build', facility: 'icon-business', other: 'icon-category' };
   const dbReady = () => state.db === 'ok' || state.db === 'closed';
   const equipmentPane = () => $('.tab-pane[data-tab="equipment"]');
   let listScrollTop = 0;
+  let detailPicker = null; // 詳細に出している写真欄
 
   function renderEquipment() {
     let current = null;
@@ -1166,6 +1524,7 @@ const App = (() => {
     $('#equipment-list-view').hidden = !!current;
     $('#equipment-detail').hidden = !current;
     $('#btn-add-equipment').hidden = state.tab !== 'equipment' || !!current || !dbReady();
+    if (detailPicker) { detailPicker.dispose(); detailPicker = null; }
     if (current) renderEquipmentDetail(current);
     else renderEquipmentList();
   }
@@ -1187,9 +1546,18 @@ const App = (() => {
     const li = el('li');
     const btn = el('button', 'row-item');
     btn.type = 'button';
-    // 表紙: 写真が無いあいだは種別のアイコン
+    // 表紙: photoIds の先頭のサムネイル。読めるまでは種別のアイコン
     const cover = el('span', 'cover');
     cover.append(icon(CATEGORY_ICONS[e.category]));
+    if (e.photoIds.length) {
+      thumbUrl(e.photoIds[0]).then((u) => {
+        if (!u) return;
+        const img = el('img');
+        img.alt = '';
+        img.src = u;
+        cover.replaceChildren(img);
+      });
+    }
     const text = el('span', 'row-text');
     text.append(el('span', 'row-title', e.name));
     const sub = [e.maker, e.model].filter(Boolean).join(' / ');
@@ -1244,8 +1612,15 @@ const App = (() => {
     );
     const parts = [head];
 
-    // 写真の列はこの見出しの下に入れる
-    parts.push(section('heading_photos'));
+    const photos = section('heading_photos');
+    const picker = photoPicker(photos, {
+      existingIds: e.photoIds,
+      removable: false,
+      onOpen: (photoId) => openEquipmentPhoto(e.id, photoId),
+      onChange: () => addDetailPhotos(e.id, picker),
+    });
+    detailPicker = picker;
+    parts.push(photos);
 
     const info = section('heading_info');
     const dl = el('dl', 'kv');
@@ -1286,6 +1661,51 @@ const App = (() => {
     $('#equipment-detail').replaceChildren(...parts);
   }
 
+  // 詳細の写真欄で選んだ写真は、読み終えたらすぐ保存する
+  async function addDetailPhotos(equipmentId, picker) {
+    if (picker.busy() || !picker.added().length) return;
+    const e = state.equipment.find((x) => x.id === equipmentId);
+    if (!e) return;
+    const now = new Date().toISOString();
+    const { photoIds, addPhotos } = attachPhotos(e, 'equipment', picker.added(), [], now);
+    const item = { ...e, photoIds, updatedAt: now };
+    try {
+      await DB.saveEquipment(item, addPhotos, []);
+      state.equipment = state.equipment.map((x) => (x.id === item.id ? item : x));
+      savedStatus(picker);
+    } catch (err) {
+      statusError('err_save_failed', err);
+    }
+    render();
+  }
+
+  // 機器の photoIds を並べ替え・削除して保存する
+  async function updateEquipmentPhotos(equipmentId, nextIds, removeIds) {
+    const e = state.equipment.find((x) => x.id === equipmentId);
+    if (!e) return;
+    const item = { ...e, photoIds: nextIds(e.photoIds), updatedAt: new Date().toISOString() };
+    await DB.saveEquipment(item, [], removeIds);
+    forgetThumbs(removeIds);
+    state.equipment = state.equipment.map((x) => (x.id === item.id ? item : x));
+    render();
+  }
+
+  function openEquipmentPhoto(equipmentId, photoId) {
+    const e = state.equipment.find((x) => x.id === equipmentId);
+    if (!e) return;
+    openPhotoViewer(photoId, {
+      onDelete: async () => {
+        await updateEquipmentPhotos(equipmentId, (ids) => ids.filter((x) => x !== photoId), [photoId]);
+        setStatus('ok', 'deleted');
+      },
+      // 表紙にする = photoIds の先頭へ(すでに表紙なら出さない)
+      onMakeCover: e.photoIds[0] === photoId ? null : async () => {
+        await updateEquipmentPhotos(equipmentId, (ids) => [photoId, ...ids.filter((x) => x !== photoId)], []);
+        setStatus('ok', 'saved');
+      },
+    });
+  }
+
   async function deleteEquipmentFlow(e) {
     const { recordIds, photoIds } = Logic.cascadeDelete(e.id, state.equipment, state.records);
     if (!(await confirmDialog('confirm_delete_equipment', { name: e.name, records: recordIds.length }))) return;
@@ -1296,6 +1716,7 @@ const App = (() => {
       return;
     }
     const gone = new Set(recordIds);
+    forgetThumbs(photoIds);
     state.equipment = state.equipment.filter((x) => x.id !== e.id);
     state.records = state.records.filter((r) => !gone.has(r.id));
     setStatus('ok', 'deleted');
@@ -1399,25 +1820,38 @@ const App = (() => {
   }
 
   function openEquipmentSheet(existing) {
-    const src = existing || { name: '', category: 'other', maker: '', model: '', serial: '', acquiredOn: null, specs: [], note: '' };
+    const src = existing || { name: '', category: 'other', maker: '', model: '', serial: '', acquiredOn: null, specs: [], note: '', photoIds: [] };
     let read = null;
+    let picker = null;
     openSheet({
       title: tr(existing ? 'sheet_edit_equipment' : 'sheet_add_equipment'),
-      build: (body) => { read = buildEquipmentForm(body, src); },
-      validate: () => Logic.validateEquipment(read())[0] || null,
+      build: (body) => {
+        // 写真は先頭に置く(機器の前で撮ってから書けるように)
+        const row = el('div', 'form-row');
+        row.append(el('span', 'form-label', tr('heading_photos')));
+        picker = photoPicker(row, { existingIds: src.photoIds, onChange: checkSheet });
+        body.append(row);
+        read = buildEquipmentForm(body, src);
+      },
+      validate: () => (picker.busy() ? 'photo_processing' : Logic.validateEquipment(read())[0] || null),
       onOk: async () => {
         const now = new Date().toISOString();
+        const id = existing ? existing.id : newId();
+        const removed = picker.removedIds();
+        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: src.photoIds }, 'equipment', picker.added(), removed, now);
         const item = Logic.normalizeEquipment({
           ...read(),
-          id: existing ? existing.id : newId(),
-          photoIds: existing ? existing.photoIds : [],
+          id,
+          photoIds,
           createdAt: (existing && existing.createdAt) || now,
           updatedAt: now,
         });
-        await DB.saveEquipment(item, [], []);
+        await DB.saveEquipment(item, addPhotos, removed);
+        forgetThumbs(removed);
         state.equipment = existing ? state.equipment.map((x) => (x.id === item.id ? item : x)) : [...state.equipment, item];
-        setStatus('ok', 'saved');
+        savedStatus(picker);
       },
+      onClose: () => picker.dispose(),
     });
   }
 
@@ -1507,6 +1941,7 @@ const App = (() => {
     bindToolbar();
     bindSheet();
     bindConfirm();
+    bindViewer();
     bindEquipment();
     for (const b of $$('#tabbar .tab')) b.addEventListener('click', () => switchTab(b.dataset.tab));
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
@@ -1519,7 +1954,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { state, render, switchTab, saveSettings, setStatus, openSheet, confirmDialog, showEquipment, openEquipmentSheet };
+  return { state, render, switchTab, saveSettings, setStatus, openSheet, confirmDialog, showEquipment, openEquipmentSheet, photoPicker, openPhotoViewer };
 })();
 </script>
 </body>
