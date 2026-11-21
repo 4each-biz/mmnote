@@ -155,8 +155,10 @@ index.html             アプリ本体(HTML・CSS・JavaScript)
 manifest.webmanifest   ホーム画面に追加するための設定
 icons/                 アイコン
 vendor/fflate.js       ZIP の読み書きに使うライブラリ
+vendor/fflate.LICENSE  fflate のライセンス
 test/                  Logic のテスト
 docs/                  設計書と実装計画
+LICENSE                mmnote のライセンス
 ```
 
 ## ライセンスとクレジット
