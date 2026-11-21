@@ -550,11 +550,58 @@ const Logic = (() => {
     return s;
   }
 
+  // ---- 日付・次回予定(時計は読まない。今日は引数で受け取る) ----
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  const toDateStr = (d) => `${pad(d.getFullYear(), 4)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseDate = (s) => s.split('-').map(Number);
+  function addMonths(s, n) {
+    const [y, m, d] = parseDate(s);
+    const idx = y * 12 + (m - 1) + n;
+    const ny = Math.floor(idx / 12), nm = idx % 12;
+    const last = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate();
+    return `${pad(ny, 4)}-${pad(nm + 1)}-${pad(Math.min(d, last))}`;
+  }
+  function diffDays(from, to) {
+    const [fy, fm, fd] = parseDate(from), [ty, tm, td] = parseDate(to);
+    return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
+  }
+  // 機器 × 区分ごとに、実施日が最新(同日は createdAt が新しい)の記録だけを見る
+  function activeDues(records) {
+    const latest = new Map();
+    for (const r of records) {
+      const key = `${r.equipmentId}\u0000${r.kind}`;
+      const cur = latest.get(key);
+      if (!cur || r.date > cur.date || (r.date === cur.date && r.createdAt > cur.createdAt)) latest.set(key, r);
+    }
+    return [...latest.values()].filter((r) => r.nextDue)
+      .map((r) => ({ equipmentId: r.equipmentId, kind: r.kind, nextDue: r.nextDue, recordId: r.id, title: r.title }));
+  }
+  function dueStatus(nextDue, today, dueSoonDays) {
+    const d = diffDays(today, nextDue);
+    return d < 0 ? 'overdue' : d <= dueSoonDays ? 'soon' : 'later';
+  }
+  function listDues(records, equipment, today, dueSoonDays) {
+    const names = new Map(equipment.map((e) => [e.id, e.name]));
+    return activeDues(records).filter((d) => names.has(d.equipmentId))
+      .map((d) => ({ ...d, status: dueStatus(d.nextDue, today, dueSoonDays), days: diffDays(today, d.nextDue), equipmentName: names.get(d.equipmentId) }))
+      .sort((a, b) => (a.nextDue < b.nextDue ? -1 : a.nextDue > b.nextDue ? 1 : a.equipmentName < b.equipmentName ? -1 : a.equipmentName > b.equipmentName ? 1 : 0));
+  }
+  function equipmentBadge(equipmentId, dues) {
+    const d = dues.find((x) => x.equipmentId === equipmentId);
+    return d && d.status !== 'later' ? d : null;
+  }
+  function cascadeDelete(equipmentId, equipment, records) {
+    const e = equipment.find((x) => x.id === equipmentId);
+    const mine = records.filter((r) => r.equipmentId === equipmentId);
+    return { recordIds: mine.map((r) => r.id), photoIds: [...(e ? e.photoIds : []), ...mine.flatMap((r) => r.photoIds)] };
+  }
+
   return {
     SETTINGS_VERSION, TABS, DEFAULT_SETTINGS, DISPLAY_ONLY_KEYS,
     mergeSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
     CATEGORIES, KINDS, LIMITS, isDate,
     validateEquipment, validateRecord, normalizeEquipment, normalizeRecord, normalizePhotoMeta,
+    toDateStr, addMonths, diffDays, activeDues, dueStatus, listDues, equipmentBadge, cascadeDelete,
     I18N, t,
   };
 })();
