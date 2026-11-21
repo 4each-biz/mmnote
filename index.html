@@ -335,6 +335,127 @@ const Logic = (() => {
     return prefersDark ? 'dark' : 'light';
   }
 
+  // ---- データの検証と正規化 ----
+  const CATEGORIES = ['vehicle', 'machine', 'facility', 'other'];
+  const KINDS = ['inspection', 'repair', 'replacement', 'cleaning', 'other'];
+  const LIMITS = { name: 60, title: 80, text: 200, note: 2000, specs: 30, photos: 10, meterUnit: 8 };
+
+  const cpLen = (s) => Array.from(s).length;
+  const clip = (s, n) => { const a = Array.from(s); return a.length > n ? a.slice(0, n).join('') : s; };
+  const str = (v) => (typeof v === 'string' ? v : '');
+
+  function isDate(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const [y, m, d] = s.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  }
+  const isBlank = (v) => v === null || v === undefined || v === '';
+
+  function validateEquipment(e) {
+    const errs = [];
+    const name = str(e.name).trim();
+    if (!name) errs.push('err_name_required');
+    else if (cpLen(name) > LIMITS.name) errs.push('err_name_long');
+    if (!isBlank(e.acquiredOn) && !isDate(e.acquiredOn)) errs.push('err_date_invalid');
+    const texts = [e.maker, e.model, e.serial];
+    const specs = Array.isArray(e.specs) ? e.specs : [];
+    for (const s of specs) texts.push(s && s.label, s && s.value);
+    const tooLong = texts.some((v) => typeof v === 'string' && cpLen(v) > LIMITS.text)
+      || specs.length > LIMITS.specs
+      || (typeof e.note === 'string' && cpLen(e.note) > LIMITS.note);
+    if (tooLong) errs.push('err_text_long');
+    return errs;
+  }
+
+  function validateRecord(r) {
+    const errs = [];
+    const title = str(r.title).trim();
+    if (!title) errs.push('err_title_required');
+    else if (cpLen(title) > LIMITS.title) errs.push('err_title_long');
+    const dateOk = isDate(r.date);
+    if (!dateOk) errs.push('err_date_invalid');
+    if (!isBlank(r.cost) && !(Number.isInteger(r.cost) && r.cost >= 0)) errs.push('err_cost_invalid');
+    if (!isBlank(r.meterValue) && !(typeof r.meterValue === 'number' && Number.isFinite(r.meterValue) && r.meterValue >= 0)) errs.push('err_meter_invalid');
+    if (!isBlank(r.nextDue)) {
+      if (!isDate(r.nextDue)) errs.push('err_date_invalid');
+      else if (dateOk && r.nextDue < r.date) errs.push('err_due_before_date');
+    }
+    const tooLong = (typeof r.vendor === 'string' && cpLen(r.vendor) > LIMITS.text)
+      || (typeof r.meterUnit === 'string' && cpLen(r.meterUnit) > LIMITS.meterUnit)
+      || (typeof r.note === 'string' && cpLen(r.note) > LIMITS.note);
+    if (tooLong) errs.push('err_text_long');
+    return [...new Set(errs)];
+  }
+
+  const isoOr = (v) => (typeof v === 'string' && v ? v : new Date().toISOString());
+  const dateOrNull = (v) => (isDate(v) ? v : null);
+  const idList = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string' && x) : []).slice(0, LIMITS.photos);
+
+  function normalizeEquipment(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (typeof raw.id !== 'string' || !raw.id) return null;
+    const name = clip(str(raw.name).trim(), LIMITS.name);
+    if (!name) return null;
+    const specs = [];
+    for (const s of Array.isArray(raw.specs) ? raw.specs : []) {
+      if (!s || typeof s !== 'object') continue;
+      const cell = (v) => clip(typeof v === 'string' ? v : (typeof v === 'number' && Number.isFinite(v) ? String(v) : ''), LIMITS.text);
+      const label = cell(s.label), value = cell(s.value);
+      if (!label && !value) continue;
+      specs.push({ label, value });
+      if (specs.length >= LIMITS.specs) break;
+    }
+    return {
+      id: raw.id,
+      name,
+      category: CATEGORIES.includes(raw.category) ? raw.category : 'other',
+      maker: clip(str(raw.maker), LIMITS.text),
+      model: clip(str(raw.model), LIMITS.text),
+      serial: clip(str(raw.serial), LIMITS.text),
+      acquiredOn: dateOrNull(raw.acquiredOn),
+      specs,
+      note: clip(str(raw.note), LIMITS.note),
+      photoIds: idList(raw.photoIds),
+      createdAt: isoOr(raw.createdAt),
+      updatedAt: isoOr(raw.updatedAt),
+    };
+  }
+
+  function normalizeRecord(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (typeof raw.id !== 'string' || !raw.id) return null;
+    if (typeof raw.equipmentId !== 'string' || !raw.equipmentId) return null;
+    if (!isDate(raw.date)) return null;
+    const title = clip(str(raw.title).trim(), LIMITS.title);
+    if (!title) return null;
+    return {
+      id: raw.id,
+      equipmentId: raw.equipmentId,
+      date: raw.date,
+      kind: KINDS.includes(raw.kind) ? raw.kind : 'other',
+      title,
+      cost: Number.isInteger(raw.cost) && raw.cost >= 0 ? raw.cost : null,
+      vendor: clip(str(raw.vendor), LIMITS.text),
+      meterValue: typeof raw.meterValue === 'number' && Number.isFinite(raw.meterValue) && raw.meterValue >= 0 ? raw.meterValue : null,
+      meterUnit: clip(str(raw.meterUnit), LIMITS.meterUnit),
+      nextDue: dateOrNull(raw.nextDue),
+      note: clip(str(raw.note), LIMITS.note),
+      photoIds: idList(raw.photoIds),
+      createdAt: isoOr(raw.createdAt),
+      updatedAt: isoOr(raw.updatedAt),
+    };
+  }
+
+  function normalizePhotoMeta(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (typeof raw.id !== 'string' || !raw.id) return null;
+    if (raw.ownerType !== 'equipment' && raw.ownerType !== 'record') return null;
+    if (typeof raw.ownerId !== 'string' || !raw.ownerId) return null;
+    const dim = (v) => (Number.isInteger(v) && v > 0 ? v : 0);
+    return { id: raw.id, ownerType: raw.ownerType, ownerId: raw.ownerId, width: dim(raw.width), height: dim(raw.height), createdAt: isoOr(raw.createdAt) };
+  }
+
   const I18N = {
     ja: {
       app_title: 'メンテナンス手帳',
@@ -367,6 +488,15 @@ const Logic = (() => {
       status_settings_saved: '設定を保存しました',
       status_storage_unavailable: '設定を保存できません',
       err_save_failed: '保存できませんでした: {reason}',
+      err_name_required: '名前を入力してください',
+      err_name_long: '名前は 60 字以内にしてください',
+      err_title_required: '作業内容を入力してください',
+      err_title_long: '作業内容は 80 字以内にしてください',
+      err_date_invalid: '日付が正しくありません',
+      err_cost_invalid: '費用は 0 以上の整数で入力してください',
+      err_meter_invalid: '計器の値は 0 以上の数で入力してください',
+      err_due_before_date: '次回予定日は実施日以降にしてください',
+      err_text_long: '長すぎる項目があります',
     },
     en: {
       app_title: 'Maintenance Notebook',
@@ -399,6 +529,15 @@ const Logic = (() => {
       status_settings_saved: 'Settings saved',
       status_storage_unavailable: 'Settings cannot be saved',
       err_save_failed: 'Could not save: {reason}',
+      err_name_required: 'Enter a name',
+      err_name_long: 'Name must be 60 characters or fewer',
+      err_title_required: 'Enter what was done',
+      err_title_long: 'Title must be 80 characters or fewer',
+      err_date_invalid: 'The date is not valid',
+      err_cost_invalid: 'Cost must be a whole number, 0 or more',
+      err_meter_invalid: 'Meter value must be a number, 0 or more',
+      err_due_before_date: 'Next due must be on or after the date',
+      err_text_long: 'Some fields are too long',
     },
   };
 
@@ -414,6 +553,8 @@ const Logic = (() => {
   return {
     SETTINGS_VERSION, TABS, DEFAULT_SETTINGS, DISPLAY_ONLY_KEYS,
     mergeSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
+    CATEGORIES, KINDS, LIMITS, isDate,
+    validateEquipment, validateRecord, normalizeEquipment, normalizeRecord, normalizePhotoMeta,
     I18N, t,
   };
 })();
