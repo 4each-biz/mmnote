@@ -1,2 +1,5 @@
 .superpowers/
 .impeccable/
+
+system-support-api-key.env
+.support-work/
