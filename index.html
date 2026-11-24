@@ -312,6 +312,7 @@ dialog#viewer[open] { display: flex; flex-direction: column; }
   <symbol id="icon-add" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
   <symbol id="icon-arrow-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
   <symbol id="icon-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+  <symbol id="icon-copy" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></symbol>
   <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
   <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
   <symbol id="icon-car" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></symbol>
@@ -770,6 +771,9 @@ const Logic = (() => {
       remove_spec: '行を削除',
       back: '一覧に戻る',
       edit: '編集',
+      duplicate: '複製',
+      data_changed_elsewhere: '別のタブでデータが変更されたので、読み込み直しました',
+      data_changed_reload: '別のタブでデータが変更されました。ページを再読込してください。',
       delete: '削除',
       heading_photos: '写真',
       heading_info: '基本情報',
@@ -989,6 +993,9 @@ const Logic = (() => {
       remove_spec: 'Remove row',
       back: 'Back to list',
       edit: 'Edit',
+      duplicate: 'Duplicate',
+      data_changed_elsewhere: 'Data was changed in another tab, so it was reloaded',
+      data_changed_reload: 'Data was changed in another tab. Reload the page.',
       delete: 'Delete',
       heading_photos: 'Photos',
       heading_info: 'Details',
@@ -1153,6 +1160,23 @@ const Logic = (() => {
   function diffDays(from, to) {
     const [fy, fm, fd] = parseDate(from), [ty, tm, td] = parseDate(to);
     return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000);
+  }
+  // 記録の複製: 内容を引き継ぎ、実施日は today。計器の値と写真は引き継がない。
+  // 次回予定日は、元の記録の間隔を保つ(ちょうど n か月後ならその月数、そうでなければ日数)
+  function duplicatePreset(r, today) {
+    let nextDue = null;
+    if (isDate(r.date) && isDate(r.nextDue) && diffDays(r.date, r.nextDue) >= 0) {
+      let months = 0;
+      for (let n = 1; n <= 120 && !months; n++) if (addMonths(r.date, n) === r.nextDue) months = n;
+      nextDue = months ? addMonths(today, months) : addDays(today, diffDays(r.date, r.nextDue));
+    }
+    return { equipmentId: r.equipmentId, kind: r.kind, title: r.title, cost: r.cost, vendor: r.vendor,
+      meterValue: null, meterUnit: r.meterUnit, note: r.note, date: today, nextDue };
+  }
+  // 写真の上限: すでに have 枚あるところへ picked を足すとき、入る分と捨てる枚数
+  function capPhotos(have, picked) {
+    const kept = picked.slice(0, Math.max(0, LIMITS.photos - have));
+    return { kept, dropped: picked.length - kept.length };
   }
   // 機器 × 区分ごとに、実施日が最新(同日は createdAt が新しい)の記録だけを見る
   function activeDues(records) {
@@ -1335,7 +1359,7 @@ const Logic = (() => {
     return l ? SUPPORT.base + l.path : null;
   }
 
-  const ABOUT = { name: 'mmnote', version: '1.0.0', repo: 'https://github.com/4each-biz/mmnote', license: 'MIT', credits: ['fflate (MIT)', 'Material Icons (Apache 2.0)'] };
+  const ABOUT = { name: 'mmnote', version: '1.1.0', repo: 'https://github.com/4each-biz/mmnote', license: 'MIT', credits: ['fflate (MIT)', 'Material Icons (Apache 2.0)'] };
 
   // ---- サンプルデータ(日付はすべて今日からの相対) ----
   function addDays(s, n) {
@@ -1402,7 +1426,7 @@ const Logic = (() => {
 
   return {
     SETTINGS_VERSION, TABS, DEFAULT_SETTINGS, DISPLAY_ONLY_KEYS,
-    SUPPORT, supportUrl, ABOUT, buildSample, addDays,
+    SUPPORT, supportUrl, ABOUT, buildSample, addDays, duplicatePreset, capPhotos,
     exportFileName, buildExport, validateImport, photoFile,
     mergeSettings, patchSettings, detectLang, loadStored, parseQuery, stepZoom, zoomOptions, effectiveTheme,
     CATEGORIES, KINDS, LIMITS, isDate,
@@ -1486,7 +1510,7 @@ const App = (() => {
         if (!db) { reject('err_db_closed'); return; }
         let tx;
         try { tx = db.transaction(stores, 'readwrite'); } catch { reject('err_db_closed'); return; }
-        tx.oncomplete = () => resolve();
+        tx.oncomplete = () => { notifyOtherTabs(); resolve(); };
         tx.onabort = () => reject(tx.error || new Error('aborted'));
         try { fn(tx); } catch (err) { try { tx.abort(); } catch { /* 既に終わっている */ } reject(err); }
       });
@@ -1586,6 +1610,35 @@ const App = (() => {
     }
     render();
   }
+
+  // 別のタブでの変更: 入力中でなければ読み込み直す。入力中(シートや確認が開いている)なら再読込を促す
+  let channel = null;
+  try { channel = new BroadcastChannel('mmnote'); } catch { /* 使えない環境では知らせない */ }
+  function notifyOtherTabs() {
+    if (channel) try { channel.postMessage('changed'); } catch { /* 閉じている */ }
+  }
+  let reloading = false;
+  let reloadAgain = false;
+  async function reloadFromOtherTab() {
+    if (state.db !== 'ok') return;
+    if (reloading) { reloadAgain = true; return; }
+    if (document.querySelector('dialog[open]')) { setStatus('warn', 'data_changed_reload'); return; }
+    reloading = true;
+    try {
+      const data = await DB.loadAll();
+      state.equipment = data.equipment;
+      state.records = data.records;
+      setStatus('ok', 'data_changed_elsewhere');
+      render();
+    } catch {
+      setStatus('warn', 'data_changed_reload');
+    } finally {
+      reloading = false;
+      // 読み込み中に届いた知らせ(取り込みのように書き込みが続くとき)を取りこぼさない
+      if (reloadAgain) { reloadAgain = false; reloadFromOtherTab(); }
+    }
+  }
+  if (channel) channel.onmessage = () => { reloadFromOtherTab(); };
 
   function handleDbClosed() {
     state.db = 'closed';
@@ -1868,13 +1921,16 @@ const App = (() => {
   // 選んだ写真に id と属性を付け、持ち主の新しい photoIds と一緒に返す
   function attachPhotos(owner, ownerType, picked, removedIds, now) {
     const gone = new Set(removedIds);
-    const addPhotos = picked.map((p) => ({
+    const keptIds = owner.photoIds.filter((id) => !gone.has(id));
+    // 詳細とシートの両方から足されても上限を超えないように、保存の直前に切る
+    const { kept, dropped } = Logic.capPhotos(keptIds.length, picked);
+    const addPhotos = kept.map((p) => ({
       meta: { id: newId(), ownerType, ownerId: owner.id, width: p.width, height: p.height, createdAt: now },
       blob: p.blob,
       thumb: p.thumb,
     }));
-    const photoIds = [...owner.photoIds.filter((id) => !gone.has(id)), ...addPhotos.map((p) => p.meta.id)];
-    return { photoIds, addPhotos };
+    const photoIds = [...keptIds, ...addPhotos.map((p) => p.meta.id)];
+    return { photoIds, addPhotos, dropped };
   }
 
   // 写真欄(シートと詳細で共用。持ち主の種類は問わない)。選んだ写真は呼び出し側が保存するまでメモリに持つ。
@@ -2007,9 +2063,10 @@ const App = (() => {
   }
 
   // 保存できたことを知らせる。写真欄の案内(読めなかった枚数など)があればそちらを残す
-  function savedStatus(picker) {
+  function savedStatus(picker, dropped = 0) {
     const n = picker.notice();
-    if (n) setStatus('warn', n.key, n.params);
+    if (dropped) setStatus('warn', 'photo_limit', { max: Logic.LIMITS.photos });
+    else if (n) setStatus('warn', n.key, n.params);
     else setStatus('ok', 'saved');
   }
 
@@ -2336,12 +2393,12 @@ const App = (() => {
     const e = state.equipment.find((x) => x.id === equipmentId);
     if (!e) return;
     const now = new Date().toISOString();
-    const { photoIds, addPhotos } = attachPhotos(e, 'equipment', picker.added(), [], now);
+    const { photoIds, addPhotos, dropped } = attachPhotos(e, 'equipment', picker.added(), [], now);
     const item = { ...e, photoIds, updatedAt: now };
     try {
       await DB.saveEquipment(item, addPhotos, []);
       state.equipment = state.equipment.map((x) => (x.id === item.id ? item : x));
-      savedStatus(picker);
+      savedStatus(picker, dropped);
     } catch (err) {
       statusError('err_save_failed', err);
     }
@@ -2522,7 +2579,7 @@ const App = (() => {
         const removed = picker.removedIds();
         // シートを開いているあいだに詳細の写真欄から足された写真も残すように、今の機器を読み直す
         const cur = (existing && state.equipment.find((x) => x.id === id)) || src;
-        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: cur.photoIds }, 'equipment', picker.added(), removed, now);
+        const { photoIds, addPhotos, dropped } = attachPhotos({ id, photoIds: cur.photoIds }, 'equipment', picker.added(), removed, now);
         const item = Logic.normalizeEquipment({
           ...read(),
           id,
@@ -2533,7 +2590,7 @@ const App = (() => {
         await DB.saveEquipment(item, addPhotos, removed);
         forgetThumbs(removed);
         state.equipment = existing ? state.equipment.map((x) => (x.id === item.id ? item : x)) : [...state.equipment, item];
-        savedStatus(picker);
+        savedStatus(picker, dropped);
       },
       onClose: () => picker.dispose(),
     });
@@ -2567,6 +2624,7 @@ const App = (() => {
       iconButton('icon-arrow-back', 'go_back', backFromRecord),
       el('h2', null, r.title),
       iconButton('icon-edit', 'edit', () => openRecordSheet(r, null)),
+      iconButton('icon-copy', 'duplicate', () => openRecordSheet(null, Logic.duplicatePreset(r, today()))),
       iconButton('icon-delete', 'delete', () => deleteRecordFlow(r.id)),
     );
     const photos = section('heading_photos');
@@ -2615,12 +2673,12 @@ const App = (() => {
     const r = state.records.find((x) => x.id === recordId);
     if (!r) return;
     const now = new Date().toISOString();
-    const { photoIds, addPhotos } = attachPhotos(r, 'record', picker.added(), [], now);
+    const { photoIds, addPhotos, dropped } = attachPhotos(r, 'record', picker.added(), [], now);
     const item = { ...r, photoIds, updatedAt: now };
     try {
       await DB.saveRecord(item, addPhotos, []);
       replaceRecord(item);
-      savedStatus(picker);
+      savedStatus(picker, dropped);
     } catch (err) {
       statusError('err_save_failed', err);
     }
@@ -2767,10 +2825,11 @@ const App = (() => {
     const p = preset || {};
     const src = existing || {
       equipmentId: p.equipmentId || '',
-      date: today(),
+      date: p.date || today(),
       kind: Logic.KINDS.includes(p.kind) ? p.kind : 'inspection',
       title: p.title || '',
-      cost: null, vendor: '', meterValue: null, meterUnit: '', nextDue: null, note: '', photoIds: [],
+      cost: p.cost ?? null, vendor: p.vendor || '', meterValue: null, meterUnit: p.meterUnit || '',
+      nextDue: p.nextDue || null, note: p.note || '', photoIds: [],
     };
     const choose = !existing && !p.equipmentId;
     let read = null;
@@ -2796,7 +2855,7 @@ const App = (() => {
         const removed = picker.removedIds();
         // シートを開いているあいだに詳細の写真欄から足された写真も残すように、今の記録を読み直す
         const cur = (existing && state.records.find((x) => x.id === id)) || src;
-        const { photoIds, addPhotos } = attachPhotos({ id, photoIds: cur.photoIds }, 'record', picker.added(), removed, now);
+        const { photoIds, addPhotos, dropped } = attachPhotos({ id, photoIds: cur.photoIds }, 'record', picker.added(), removed, now);
         const item = Logic.normalizeRecord({
           ...read(),
           id,
@@ -2807,7 +2866,7 @@ const App = (() => {
         await DB.saveRecord(item, addPhotos, removed);
         forgetThumbs(removed);
         state.records = existing ? state.records.map((x) => (x.id === item.id ? item : x)) : [...state.records, item];
-        savedStatus(picker);
+        savedStatus(picker, dropped);
       },
       onClose: () => picker.dispose(),
     });

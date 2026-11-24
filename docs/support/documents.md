@@ -250,6 +250,18 @@ status: published
 
 記録を押して開き、「編集」または「削除」を押します。記録を削除すると、その記録の写真も消えます。記録の編集では、機器は変えられません。
 
+## 複製する
+
+毎月の点検のように、同じ内容の記録をくり返し付けるときは、前の記録を複製すると早く済みます。
+
+1. もとにする記録を押して開き、「複製」を押します。
+2. 「記録の追加」の画面が、もとの記録の内容が入った状態で開きます。実施日は今日になります。
+3. 必要な所を直して、「OK」を押します。
+
+- 引き継がれるもの: 機器、区分、作業内容、費用、作業者・業者、計器の単位、メモ
+- 引き継がれないもの: 計器の値、写真
+- 次回予定日: もとの記録と同じ間隔で入ります (もとが「実施日の 1 か月後」なら、今日の 1 か月後)。もとの記録に次回予定日が無ければ、空のままです
+
 ----- en -----
 
 # Adding records
@@ -278,6 +290,18 @@ status: published
 ## Edit and delete
 
 Tap a record to open it, then tap "Edit" or "Delete". Deleting a record also deletes its photos. The equipment of a record cannot be changed when editing.
+
+## Duplicate
+
+For records you add again and again with the same content, such as a monthly inspection, duplicating an earlier record is quicker.
+
+1. Tap the record you want to start from, then tap "Duplicate".
+2. The "Add record" screen opens with the content of that record filled in. The date is set to today.
+3. Change what you need and tap "OK".
+
+- Carried over: equipment, type, work done, cost, done by, meter unit, notes
+- Not carried over: meter reading, photos
+- Next due: filled in with the same interval as the original record (if the original was "1 month after the date", it becomes 1 month from today). If the original has no next due date, it stays empty
 
 ===== DOCUMENT =====
 type: manual
@@ -577,7 +601,9 @@ status: published
 
 ## 複数のタブで開いているとき
 
-2 つのタブで同時に開いていると、片方での変更が、もう片方には読み込み直すまで出ません。1 つのタブで使ってください。
+2 つのタブで同時に開いているときは、片方での変更が、もう片方にも自動で反映され、「別のタブでデータが変更されたので、読み込み直しました」と出ます。
+
+入力の画面を開いている最中は、自動では反映されず、「別のタブでデータが変更されました。ページを再読込してください。」と出ます。入力を済ませてから、ページを読み込み直してください。
 
 ## 解決しないとき
 
@@ -607,7 +633,9 @@ status: published
 
 ## Using several tabs
 
-If the app is open in two tabs at once, changes made in one do not appear in the other until it is reloaded. Use a single tab.
+If the app is open in two tabs at once, changes made in one are applied to the other automatically, and it shows "Data was changed in another tab, so it was reloaded".
+
+While an input screen is open, the change is not applied automatically and the app shows "Data was changed in another tab. Reload the page." Finish your input, then reload the page.
 
 ## If the problem persists
 
